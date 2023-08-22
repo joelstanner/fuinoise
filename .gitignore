@@ -1,0 +1,40 @@
+# Compiled Python files
+__pycache__/
+*.pyc
+
+# Django-related
+*.log
+*.pot
+*.pyc
+local_settings.py
+
+# Database
+db.sqlite3
+
+# Media
+media/
+
+# Static files
+staticfiles/
+
+# Virtual environment
+venv/
+venv.bak/
+
+# IDE-specific
+.vscode/
+.idea/
+
+# Compiled files
+*.pyo
+*.pyd
+
+# Backup files
+*.bak
+*.swp
+*~
+
+# Dependency directories
+env/
+lib/
+
