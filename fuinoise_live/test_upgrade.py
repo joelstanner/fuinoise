@@ -3,6 +3,7 @@ from zoneinfo import ZoneInfo
 
 from django.contrib import admin
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, connection
 from django.db.migrations.executor import MigrationExecutor
 from django.test import TestCase, TransactionTestCase
@@ -10,7 +11,23 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .admin import RaidSlotInline
-from .models import Event, RaidSlot, Streamer
+from .models import (
+    Community,
+    CommunityMembership,
+    Event,
+    Genre,
+    Instrument,
+    RaidSlot,
+    Streamer,
+    WeeklyAvailability,
+)
+
+
+def create_event(**kwargs):
+    community, _ = Community.objects.get_or_create(
+        slug="fuinoise", defaults={"name": "Fuinoise"}
+    )
+    return Event.objects.create(community=community, **kwargs)
 
 
 class StreamerIdentityTests(TestCase):
@@ -40,7 +57,7 @@ class AdminSmokeTests(TestCase):
         user = get_user_model().objects.create_superuser(
             username="admin", email="admin@example.com", password="test-password"
         )
-        event = Event.objects.create(date=datetime.date(2026, 9, 23))
+        event = create_event(date=datetime.date(2026, 9, 23))
 
         self.client.force_login(user)
         response = self.client.get(
@@ -50,7 +67,7 @@ class AdminSmokeTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_slot_local_time_does_not_change_active_timezone(self):
-        event = Event.objects.create(
+        event = create_event(
             date=datetime.date(2026, 9, 23), event_time_zone="US/Pacific"
         )
         streamer = Streamer.objects.create(
@@ -71,7 +88,7 @@ class AdminSmokeTests(TestCase):
             self.assertEqual(str(timezone.get_current_timezone()), "US/Eastern")
 
     def test_position_is_unique_per_event(self):
-        event = Event.objects.create(date=datetime.date(2026, 9, 23))
+        event = create_event(date=datetime.date(2026, 9, 23))
         streamer = Streamer.objects.create(
             display_name="First",
             twitch_username="first",
@@ -87,7 +104,7 @@ class AdminSmokeTests(TestCase):
         user = get_user_model().objects.create_superuser(
             username="admin", email="admin@example.com", password="test-password"
         )
-        event = Event.objects.create(date=datetime.date(2026, 9, 23))
+        event = create_event(date=datetime.date(2026, 9, 23))
         streamer = Streamer.objects.create(
             display_name="First",
             twitch_username="first",
@@ -110,6 +127,8 @@ class AdminSmokeTests(TestCase):
                 "name": event.name,
                 "description": "",
                 "event_time_zone": event.event_time_zone,
+                "community": str(event.community_id),
+                "organizer_notes": "",
                 "raidslot_set-TOTAL_FORMS": "2",
                 "raidslot_set-INITIAL_FORMS": "2",
                 "raidslot_set-MIN_NUM_FORMS": "0",
@@ -125,6 +144,8 @@ class AdminSmokeTests(TestCase):
                         "start_0": slot.start.strftime("%Y-%m-%d"),
                         "start_1": slot.start.strftime("%H:%M:%S"),
                         "raid_slot_note": "",
+                        "handoff_at_0": "",
+                        "handoff_at_1": "",
                         "replay_url": "",
                     }.items()
                 },
@@ -141,11 +162,52 @@ class AdminSmokeTests(TestCase):
             self.assertEqual(slot.start, starts[index])
 
 
+class MusicianRaidDataTests(TestCase):
+    def test_musician_profile_schedule_and_membership(self):
+        event = create_event(date=datetime.date(2026, 9, 23))
+        streamer = Streamer.objects.create(
+            display_name="Musician",
+            twitch_username="musician",
+            time_zone="US/Pacific",
+            raid_availability="limited",
+            raid_preferences="Ask before 8pm",
+        )
+        streamer.instruments.add(Instrument.objects.create(name="Guitar"))
+        streamer.genres.add(Genre.objects.create(name="Jazz"))
+        WeeklyAvailability.objects.create(
+            streamer=streamer,
+            day_of_week=2,
+            start_time=datetime.time(18),
+            end_time=datetime.time(21),
+        )
+        CommunityMembership.objects.create(
+            community=event.community, streamer=streamer, role="Member"
+        )
+        self.assertEqual(streamer.communities.get(), event.community)
+        self.assertEqual(streamer.instruments.get().name, "Guitar")
+        self.assertEqual(streamer.genres.get().name, "Jazz")
+        self.assertEqual(
+            streamer.weekly_availability.get().get_day_of_week_display(), "Wednesday"
+        )
+
+    def test_handoff_must_follow_start(self):
+        event = create_event(date=datetime.date(2026, 9, 23))
+        streamer = Streamer.objects.create(
+            display_name="First", twitch_username="first"
+        )
+        start = datetime.datetime(2026, 9, 23, 20, tzinfo=datetime.timezone.utc)
+        slot = RaidSlot(
+            event=event, streamer=streamer, position=1, start=start, handoff_at=start
+        )
+        with self.assertRaises(ValidationError):
+            slot.full_clean()
+
+
 class PositionMigrationTests(TransactionTestCase):
     def test_backfill_uses_start_then_id_within_each_event(self):
         executor = MigrationExecutor(connection)
         before = [("fuinoise_live", "0002_alter_event_event_time_zone")]
-        after = [("fuinoise_live", "0004_streamer_twitch_identity")]
+        after = [("fuinoise_live", "0006_backfill_event_community")]
         executor.migrate(before)
         old_apps = executor.loader.project_state(before).apps
         OldEvent = old_apps.get_model("fuinoise_live", "Event")
@@ -184,3 +246,8 @@ class PositionMigrationTests(TransactionTestCase):
         migrated_streamer = NewStreamer.objects.get(pk=streamer.pk)
         self.assertEqual(migrated_streamer.twitch_id, "123456789")
         self.assertEqual(migrated_streamer.twitch_username, "first")
+        NewEvent = executor.loader.project_state(after).apps.get_model(
+            "fuinoise_live", "Event"
+        )
+        self.assertEqual(NewEvent.objects.get(pk=event.pk).community.slug, "fuinoise")
+        self.assertEqual(NewEvent.objects.get(pk=other.pk).community.slug, "fuinoise")

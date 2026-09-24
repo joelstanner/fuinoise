@@ -2,6 +2,14 @@
 
 Keep `Event`, `Streamer`, and `RaidSlot`, their existing data, and the current migrations. Django Admin remains the organizer interface. Build public pages from these records rather than introducing a separate schedule store.
 
+## Completed: Fuinoise musician and raid data
+
+- Added reusable instrument and genre records linked to streamers, plus a streamer time zone, raid availability status, preferences, and private organizer notes.
+- Added weekly availability windows in each streamer's time zone. An end time earlier than the start time means the window continues into the following day. These windows are planning information, not booked raid slots.
+- Kept `RaidSlot` as the event participation record and its existing unique position as raid order. Added an optional planned handoff time, while retaining the scheduled start and slot notes.
+- Added communities, streamer memberships with role and notes, and an event community. Existing events are assigned to the default Fuinoise community by a data migration.
+- Exposed the new records in Django Admin and added model, Admin, and migration tests.
+
 ## 1. Improve organizer Admin
 
 - Add an explicit `RaidSlot` position/order field and a migration. Make slots reorderable within an event without changing their scheduled `start` times; define a stable fallback for existing rows and prevent ambiguous ordering.
@@ -11,9 +19,8 @@ Keep `Event`, `Streamer`, and `RaidSlot`, their existing data, and the current m
 
 ## 2. Add community configuration
 
-- Add a `Community` model and link each `Event` to one community. Store public name, branding, and site configuration in data rather than Golden Shrimp Guild-specific code.
-- Add a data migration that creates a default community and assigns every existing event to it. Preserve event, streamer, and raid slot records and all earlier migrations.
-- Expose community fields and event association in Admin; add tests for the migration and organizer workflows.
+- Done: `Community` has name, description, website, and logo URL; each event belongs to one community. Existing events were backfilled, and Admin exposes the association.
+- Remaining: define any further public branding or site configuration needed by the public pages and test full organizer workflows for those settings.
 
 ## 3. Publish event pages
 

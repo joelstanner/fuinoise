@@ -6,7 +6,16 @@ from django.db import transaction
 from django.forms.models import BaseInlineFormSet
 from django.utils import timezone
 
-from .models import Event, RaidSlot, Streamer
+from .models import (
+    Community,
+    CommunityMembership,
+    Event,
+    Genre,
+    Instrument,
+    RaidSlot,
+    Streamer,
+    WeeklyAvailability,
+)
 
 
 class RaidSlotInlineForm(forms.ModelForm):
@@ -75,6 +84,7 @@ class RaidSlotInline(admin.TabularInline):
         "position",
         "streamer",
         "start",
+        "handoff_at",
         "event_time_in_event_timezone",
         "raid_slot_note",
         "replay_url",
@@ -95,17 +105,35 @@ class RaidSlotInline(admin.TabularInline):
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
     inlines = (RaidSlotInline,)
-    list_display = ("name", "date", "event_time_zone", "slot_count")
-    list_filter = ("date", "event_time_zone")
-    search_fields = ("name", "description", "raidslot__streamer__display_name")
+    list_display = ("name", "community", "date", "event_time_zone", "slot_count")
+    list_filter = ("community", "date", "event_time_zone")
+    search_fields = (
+        "name",
+        "community__name",
+        "description",
+        "raidslot__streamer__display_name",
+    )
 
     @admin.display(description="Slots")
     def slot_count(self, event: Event) -> int:
         return event.raidslot_set.count()
 
 
+class WeeklyAvailabilityInline(admin.TabularInline):
+    model = WeeklyAvailability
+    extra = 0
+
+
+class CommunityMembershipInline(admin.TabularInline):
+    model = CommunityMembership
+    fk_name = "streamer"
+    extra = 0
+
+
 @admin.register(Streamer)
 class StreamerAdmin(admin.ModelAdmin):
+    inlines = (WeeklyAvailabilityInline, CommunityMembershipInline)
+    filter_horizontal = ("instruments", "genres")
     list_display = (
         "display_name",
         "twitch_display_name",
@@ -113,12 +141,24 @@ class StreamerAdmin(admin.ModelAdmin):
         "twitch_id",
         "twitch_url",
         "homepage",
+        "time_zone",
+        "raid_availability",
+    )
+    list_filter = (
+        "raid_availability",
+        "time_zone",
+        "instruments",
+        "genres",
+        "communities",
     )
     search_fields = (
         "display_name",
         "twitch_display_name",
         "twitch_username",
         "twitch_id",
+        "instruments__name",
+        "genres__name",
+        "communities__name",
     )
 
 
@@ -129,6 +169,7 @@ class RaidSlotAdmin(admin.ModelAdmin):
         "position",
         "streamer",
         "start",
+        "handoff_at",
         "raid_slot_note",
         "replay_url",
     )
@@ -139,3 +180,29 @@ class RaidSlotAdmin(admin.ModelAdmin):
         "streamer__twitch_username",
     )
     ordering = ("event", "position")
+
+
+@admin.register(Community)
+class CommunityAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug", "website")
+    search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}
+
+
+@admin.register(Instrument, Genre)
+class TaxonomyAdmin(admin.ModelAdmin):
+    search_fields = ("name",)
+
+
+@admin.register(WeeklyAvailability)
+class WeeklyAvailabilityAdmin(admin.ModelAdmin):
+    list_display = ("streamer", "day_of_week", "start_time", "end_time")
+    list_filter = ("day_of_week",)
+    search_fields = ("streamer__display_name",)
+
+
+@admin.register(CommunityMembership)
+class CommunityMembershipAdmin(admin.ModelAdmin):
+    list_display = ("streamer", "community", "role", "joined_on")
+    list_filter = ("community",)
+    search_fields = ("streamer__display_name", "community__name", "role")
