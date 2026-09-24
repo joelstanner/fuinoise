@@ -2,6 +2,7 @@ import zoneinfo
 
 from django.contrib import admin
 from django.db import models
+from django.db.models.functions import Lower
 
 EVENT_TIME_ZONE_DEFAULT = zoneinfo.ZoneInfo("US/Pacific")
 
@@ -11,11 +12,27 @@ def timezone_choices() -> list[tuple[str, str]]:
 
 
 class Streamer(models.Model):
+    # Organizer-chosen name, independent of the Twitch account's display name.
     display_name = models.CharField(max_length=80, unique=True)
     twitch_username = models.CharField(max_length=80, unique=True)
-    twitch_url = models.URLField(unique=True)
+    twitch_display_name = models.CharField(max_length=80, default="", blank=True)
     homepage = models.URLField(default="", blank=True)
-    twitch_id = models.IntegerField(default=None, blank=True, null=True, unique=True)
+    twitch_id = models.CharField(max_length=32, blank=True, null=True, unique=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                Lower("twitch_username"), name="unique_streamer_twitch_login_ci"
+            )
+        ]
+
+    @property
+    def twitch_url(self) -> str:
+        return f"https://www.twitch.tv/{self.twitch_username}"
+
+    def save(self, *args, **kwargs):
+        self.twitch_username = self.twitch_username.strip().lower()
+        super().save(*args, **kwargs)
 
     def __str__(self) -> str:
         return str(self.display_name)
@@ -45,6 +62,7 @@ class Event(models.Model):
 class RaidSlot(models.Model):
     streamer = models.ForeignKey(Streamer, on_delete=models.CASCADE)
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
+    position = models.PositiveIntegerField(help_text="Order within this event")
     start = models.DateTimeField()
     replay_url = models.URLField(default="", blank=True)
     raid_slot_note = models.CharField(
@@ -53,6 +71,14 @@ class RaidSlot(models.Model):
         blank=True,
         max_length=255,
     )
+
+    class Meta:
+        ordering = ["event_id", "position", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["event", "position"], name="unique_raid_slot_event_position"
+            )
+        ]
 
     def __str__(self) -> str:
         return f"""{self.streamer.display_name} - 
