@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils import timezone
 
-from .models import Event, Streamer, RaidSlot
+from .models import Event, RaidSlot, Streamer
 
 
 class RaidSlotInLine(admin.TabularInline):
@@ -14,14 +14,13 @@ class RaidSlotInLine(admin.TabularInline):
         "raid_slot_note",
     )
 
-    def event_time_in_event_timezone(self, raidslot):
-        """display the time for the raid slot in the event timezone with beautiful formatting"""
+    @admin.display(description="Raid Slot Time")
+    def event_time_in_event_timezone(self, raidslot: RaidSlot) -> str:
+        """Display the raid slot time in the event time zone."""
         fmt = "%-I %p"
         timezone.activate(raidslot.event.event_time_zone)
         dt = raidslot.start.astimezone(timezone.get_current_timezone())
-        return dt.strftime(fmt)
-
-    event_time_in_event_timezone.short_description = "Raid Slot Time"
+        return str(dt.strftime(fmt))
 
 
 class EventAdmin(admin.ModelAdmin):

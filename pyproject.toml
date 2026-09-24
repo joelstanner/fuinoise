@@ -1,0 +1,42 @@
+[tool.black]
+line-length = 88
+target-version = ["py313"]
+extend-exclude = "^(build|dist|venv|fuinoise_live/migrations)/"
+
+[tool.isort]
+profile = "black"
+line_length = 88
+known_first_party = ["fuinoise", "fuinoise_live"]
+skip = ["build", "dist", "venv", "fuinoise_live/migrations"]
+
+[tool.mypy]
+python_version = "3.13"
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_return_any = true
+no_implicit_optional = true
+strict_optional = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+pretty = true
+show_column_numbers = true
+show_error_codes = true
+exclude = '^(build|dist|venv|fuinoise_live/migrations)/'
+
+[[tool.mypy.overrides]]
+module = ["fuinoise_live.tests", "fuinoise_live.test_upgrade"]
+disallow_untyped_defs = false
+check_untyped_defs = false
+
+[[tool.mypy.overrides]]
+module = "django.*"
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+exclude = ["build", "dist", "venv", "fuinoise_live/migrations"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = []

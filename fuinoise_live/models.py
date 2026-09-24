@@ -1,16 +1,12 @@
-import datetime
-import time
 import zoneinfo
 
-from django.utils import timezone
 from django.contrib import admin
 from django.db import models
-
 
 EVENT_TIME_ZONE_DEFAULT = zoneinfo.ZoneInfo("US/Pacific")
 
 
-def timezone_choices():
+def timezone_choices() -> list[tuple[str, str]]:
     return [(name, name) for name in sorted(zoneinfo.available_timezones())]
 
 
@@ -21,8 +17,8 @@ class Streamer(models.Model):
     homepage = models.URLField(default="", blank=True)
     twitch_id = models.IntegerField(default=None, blank=True, null=True, unique=True)
 
-    def __str__(self):
-        return self.display_name
+    def __str__(self) -> str:
+        return str(self.display_name)
 
 
 class Event(models.Model):
@@ -42,7 +38,7 @@ class Event(models.Model):
     )
 
     @admin.display()
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name} - {self.date.strftime('%Y/%b/%d')}"
 
 
@@ -58,6 +54,6 @@ class RaidSlot(models.Model):
         max_length=255,
     )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"""{self.streamer.display_name} - 
             {self.event.name} - {self.event.date.strftime('%Y/%b/%d')} - {self.start}"""

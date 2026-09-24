@@ -13,3 +13,15 @@ venv/bin/python -m pip install -r requirements.txt
 venv/bin/python manage.py migrate
 venv/bin/python manage.py runserver
 ```
+
+## Lint and type checks
+
+Install the development tools with `venv/bin/python -m pip install -r requirements-dev.txt`,
+then run:
+
+```sh
+venv/bin/ruff check .
+venv/bin/black --check .
+venv/bin/isort --check-only fuinoise fuinoise_live manage.py
+venv/bin/mypy fuinoise fuinoise_live
+```
