@@ -10,6 +10,10 @@ from django.db import models
 EVENT_TIME_ZONE_DEFAULT = zoneinfo.ZoneInfo("US/Pacific")
 
 
+def timezone_choices():
+    return [(name, name) for name in sorted(zoneinfo.available_timezones())]
+
+
 class Streamer(models.Model):
     display_name = models.CharField(max_length=80, unique=True)
     twitch_username = models.CharField(max_length=80, unique=True)
@@ -22,13 +26,6 @@ class Streamer(models.Model):
 
 
 class Event(models.Model):
-    TIMEZONE_CHOICES = sorted(
-        zip(
-            timezone.zoneinfo.available_timezones(),
-            timezone.zoneinfo.available_timezones(),
-        )
-    )
-
     date = models.DateField("Calendar Start Date of the event")
     name = models.CharField(default="Raid Train", max_length=255)
     streamers = models.ManyToManyField(Streamer, through="RaidSlot")
@@ -40,7 +37,7 @@ class Event(models.Model):
     event_time_zone = models.CharField(
         "Time zone that is considered the home timezone for the event",
         default=str(EVENT_TIME_ZONE_DEFAULT),
-        choices=TIMEZONE_CHOICES,
+        choices=timezone_choices,
         max_length=80,
     )
 
