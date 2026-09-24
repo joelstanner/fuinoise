@@ -18,7 +18,13 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
+from fuinoise_live import views
+
 urlpatterns = [
+    path("", views.current_events, name="current_events"),
+    path("upcoming/", views.upcoming_events, name="upcoming_events"),
+    path("history/", views.historical_events, name="historical_events"),
+    path("events/<int:pk>/", views.event_detail, name="event_detail"),
     path("admin/", admin.site.urls),
     path("__debug__/", include("debug_toolbar.urls")),
 ]

@@ -23,6 +23,10 @@ class RaidSlotInlineForm(forms.ModelForm):
         model = RaidSlot
         fields = "__all__"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["streamer"].empty_label = "Open slot"
+
     def validate_constraints(self):
         # Swaps are checked against the final formset state and saved atomically.
         pass
@@ -80,6 +84,7 @@ class RaidSlotInline(admin.TabularInline):
     form = RaidSlotInlineForm
     formset = RaidSlotInlineFormSet
     ordering = ("position", "id")
+    autocomplete_fields = ("streamer",)
     fields = (
         "position",
         "streamer",
@@ -90,7 +95,7 @@ class RaidSlotInline(admin.TabularInline):
         "replay_url",
     )
     readonly_fields = ("event_time_in_event_timezone",)
-    extra = 0
+    extra = 1
 
     @admin.display(description="Event local time")
     def event_time_in_event_timezone(self, slot: RaidSlot) -> str:
@@ -105,8 +110,15 @@ class RaidSlotInline(admin.TabularInline):
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
     inlines = (RaidSlotInline,)
-    list_display = ("name", "community", "date", "event_time_zone", "slot_count")
-    list_filter = ("community", "date", "event_time_zone")
+    list_display = (
+        "name",
+        "publication_status",
+        "community",
+        "date",
+        "event_time_zone",
+        "slot_count",
+    )
+    list_filter = ("publication_status", "community", "date", "event_time_zone")
     search_fields = (
         "name",
         "community__name",
@@ -184,8 +196,8 @@ class RaidSlotAdmin(admin.ModelAdmin):
 
 @admin.register(Community)
 class CommunityAdmin(admin.ModelAdmin):
-    list_display = ("name", "slug", "website")
-    search_fields = ("name", "slug")
+    list_display = ("name", "slug", "website", "logo_url")
+    search_fields = ("name", "slug", "description")
     prepopulated_fields = {"slug": ("name",)}
 
 

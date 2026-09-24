@@ -88,8 +88,19 @@ class Streamer(models.Model):
 
 
 class Event(models.Model):
+    class PublicationStatus(models.TextChoices):
+        DRAFT = "draft", "Draft"
+        PUBLISHED = "published", "Published"
+        PRIVATE = "private", "Private"
+
     date = models.DateField("Calendar Start Date of the event")
     name = models.CharField(default="Raid Train", max_length=255)
+    publication_status = models.CharField(
+        max_length=16,
+        choices=PublicationStatus.choices,
+        default=PublicationStatus.DRAFT,
+        help_text="Only published events appear on the public site.",
+    )
     streamers = models.ManyToManyField(Streamer, through="RaidSlot")
     community = models.ForeignKey(
         Community, on_delete=models.PROTECT, related_name="events"
@@ -113,7 +124,13 @@ class Event(models.Model):
 
 
 class RaidSlot(models.Model):
-    streamer = models.ForeignKey(Streamer, on_delete=models.CASCADE)
+    streamer = models.ForeignKey(
+        Streamer,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        help_text="Leave blank for an open time slot; change this to move a streamer.",
+    )
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
     position = models.PositiveIntegerField(help_text="Order within this event")
     start = models.DateTimeField()
@@ -146,8 +163,8 @@ class RaidSlot(models.Model):
             )
 
     def __str__(self) -> str:
-        return f"""{self.streamer.display_name} - 
-            {self.event.name} - {self.event.date.strftime('%Y/%b/%d')} - {self.start}"""
+        streamer_name = self.streamer.display_name if self.streamer else "Open slot"
+        return f"{streamer_name} - {self.event.name} - {self.start}"
 
 
 class WeeklyAvailability(models.Model):
