@@ -1,4 +1,5 @@
 import zoneinfo
+from typing import Any
 
 from django.contrib import admin
 from django.db import models
@@ -15,14 +16,14 @@ class Instrument(models.Model):
     name = models.CharField(max_length=80, unique=True)
 
     def __str__(self) -> str:
-        return self.name
+        return str(self.name)
 
 
 class Genre(models.Model):
     name = models.CharField(max_length=80, unique=True)
 
     def __str__(self) -> str:
-        return self.name
+        return str(self.name)
 
 
 class Community(models.Model):
@@ -42,7 +43,7 @@ class Community(models.Model):
         verbose_name_plural = "communities"
 
     def __str__(self) -> str:
-        return self.name
+        return str(self.name)
 
 
 class Streamer(models.Model):
@@ -95,7 +96,7 @@ class Streamer(models.Model):
     def twitch_url(self) -> str:
         return f"https://www.twitch.tv/{self.twitch_username}"
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         self.twitch_username = self.twitch_username.strip().lower()
         super().save(*args, **kwargs)
 

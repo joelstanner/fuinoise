@@ -1,6 +1,8 @@
 import json
 import re
-from datetime import datetime, timedelta, timezone as datetime_timezone
+from datetime import datetime, timedelta
+from datetime import timezone as datetime_timezone
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from django import forms
@@ -22,7 +24,7 @@ from .models import (
 
 
 class EventLocalTimeField(forms.TimeField):
-    def to_python(self, value):
+    def to_python(self, value: Any) -> Any:
         if isinstance(value, str):
             shorthand = re.fullmatch(
                 r"\s*(\d{1,2})(?::(\d{2}))?\s*([ap])m?\s*", value, re.IGNORECASE
@@ -59,7 +61,7 @@ class RaidSlotInlineForm(forms.ModelForm):
         model = RaidSlot
         exclude = ("start",)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         self.event = kwargs.pop("event", None)
         super().__init__(*args, **kwargs)
         self.fields["streamer"].empty_label = "Open slot"
@@ -78,12 +80,12 @@ class RaidSlotInlineForm(forms.ModelForm):
         elif self.event and self.event.date:
             self.initial["start_date"] = self.event.date
 
-    def has_changed(self):
+    def has_changed(self) -> bool:
         if not self.instance.pk and self.changed_data == ["start_date"]:
             return False
-        return super().has_changed()
+        return bool(super().has_changed())
 
-    def clean(self):
+    def clean(self) -> Any:
         cleaned_data = super().clean()
         if self.cleaned_data.get("DELETE"):
             return cleaned_data
@@ -98,29 +100,37 @@ class RaidSlotInlineForm(forms.ModelForm):
         zone = ZoneInfo(self.event.event_time_zone)
         wall_time = datetime.combine(start_date, start_time)
         local_start = wall_time.replace(tzinfo=zone)
-        if local_start.astimezone(datetime_timezone.utc).astimezone(zone).replace(
-            tzinfo=None
-        ) != wall_time:
-            self.add_error("start_time", "This time does not exist in the event time zone.")
-        elif local_start.utcoffset() != wall_time.replace(
-            tzinfo=zone, fold=1
-        ).utcoffset():
-            self.add_error("start_time", "This time is ambiguous in the event time zone.")
+        if (
+            local_start.astimezone(datetime_timezone.utc)
+            .astimezone(zone)
+            .replace(tzinfo=None)
+            != wall_time
+        ):
+            self.add_error(
+                "start_time", "This time does not exist in the event time zone."
+            )
+        elif (
+            local_start.utcoffset()
+            != wall_time.replace(tzinfo=zone, fold=1).utcoffset()
+        ):
+            self.add_error(
+                "start_time", "This time is ambiguous in the event time zone."
+            )
         else:
             self.instance.start = local_start
             cleaned_data["start"] = local_start
         return cleaned_data
 
-    def validate_constraints(self):
+    def validate_constraints(self) -> None:
         # Swaps are checked against the final formset state and saved atomically.
         pass
 
 
 class RaidSlotInlineFormSet(BaseInlineFormSet):
-    def get_form_kwargs(self, index):
+    def get_form_kwargs(self, index: int | None) -> dict[str, Any]:
         return {**super().get_form_kwargs(index), "event": self.instance}
 
-    def clean(self):
+    def clean(self) -> None:
         starts = set()
         for form in self.forms:
             if not form.cleaned_data or form.cleaned_data.get("DELETE"):
@@ -135,7 +145,7 @@ class RaidSlotInlineFormSet(BaseInlineFormSet):
             starts.add(start)
         super().clean()
 
-    def save(self, commit=True):
+    def save(self, commit: bool = True) -> Any:
         if not commit:
             return super().save(commit=False)
         # Move existing rows out of the way so start times can be swapped.
@@ -204,13 +214,14 @@ class EventAdminForm(forms.ModelForm):
     class Media:
         js = ("fuinoise_live/event_admin.js",)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         if not self.instance.pk:
             self.fields["event_time_zone"].required = False
             self.initial["event_time_zone"] = ""
             self.fields["event_time_zone"].help_text = (
-                "Defaults to the selected community’s time zone; choose another for this event."
+                "Defaults to the selected community’s time zone; "
+                "choose another for this event."
             )
             community_widget = self.fields["community"].widget
             if hasattr(community_widget, "widget"):
@@ -219,7 +230,7 @@ class EventAdminForm(forms.ModelForm):
                 dict(Community.objects.values_list("pk", "default_time_zone"))
             )
 
-    def clean(self):
+    def clean(self) -> Any:
         cleaned_data = super().clean()
         if not self.instance.pk and not cleaned_data.get("event_time_zone"):
             community = cleaned_data.get("community")
@@ -250,7 +261,7 @@ class EventAdmin(admin.ModelAdmin):
 
     @admin.display(description="Slots")
     def slot_count(self, event: Event) -> int:
-        return event.raidslot_set.count()
+        return int(event.raidslot_set.count())
 
 
 class WeeklyAvailabilityInline(admin.TabularInline):

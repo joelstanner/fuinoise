@@ -6,24 +6,26 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('fuinoise_live', '0011_remove_raidslot_handoff_at'),
+        ("fuinoise_live", "0011_remove_raidslot_handoff_at"),
     ]
 
     operations = [
         migrations.AlterModelOptions(
-            name='raidslot',
-            options={'ordering': ['event_id', 'start', 'id']},
+            name="raidslot",
+            options={"ordering": ["event_id", "start", "id"]},
         ),
         migrations.RemoveConstraint(
-            model_name='raidslot',
-            name='unique_raid_slot_event_position',
+            model_name="raidslot",
+            name="unique_raid_slot_event_position",
         ),
         migrations.RemoveField(
-            model_name='raidslot',
-            name='position',
+            model_name="raidslot",
+            name="position",
         ),
         migrations.AddConstraint(
-            model_name='raidslot',
-            constraint=models.UniqueConstraint(fields=('event', 'start'), name='unique_raid_slot_event_start'),
+            model_name="raidslot",
+            constraint=models.UniqueConstraint(
+                fields=("event", "start"), name="unique_raid_slot_event_start"
+            ),
         ),
     ]

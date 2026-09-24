@@ -7,13 +7,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('fuinoise_live', '0008_alter_raidslot_streamer'),
+        ("fuinoise_live", "0008_alter_raidslot_streamer"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='community',
-            name='default_time_zone',
-            field=models.CharField(choices=fuinoise_live.models.timezone_choices, default='GMT', max_length=80, verbose_name='Default raid event time zone'),
+            model_name="community",
+            name="default_time_zone",
+            field=models.CharField(
+                choices=fuinoise_live.models.timezone_choices,
+                default="GMT",
+                max_length=80,
+                verbose_name="Default raid event time zone",
+            ),
         ),
     ]

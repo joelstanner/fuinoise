@@ -6,18 +6,29 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('fuinoise_live', '0009_community_default_time_zone'),
+        ("fuinoise_live", "0009_community_default_time_zone"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='streamer',
-            name='display_name',
-            field=models.CharField(help_text='This is the name visitors see on event pages.', max_length=80, unique=True, verbose_name='Name shown on Fuinoise'),
+            model_name="streamer",
+            name="display_name",
+            field=models.CharField(
+                help_text="This is the name visitors see on event pages.",
+                max_length=80,
+                unique=True,
+                verbose_name="Name shown on Fuinoise",
+            ),
         ),
         migrations.AlterField(
-            model_name='streamer',
-            name='twitch_display_name',
-            field=models.CharField(blank=True, default='', help_text="The display name shown on the streamer's Twitch profile.", max_length=80, verbose_name='Name shown on Twitch'),
+            model_name="streamer",
+            name="twitch_display_name",
+            field=models.CharField(
+                blank=True,
+                default="",
+                help_text="The display name shown on the streamer's Twitch profile.",
+                max_length=80,
+                verbose_name="Name shown on Twitch",
+            ),
         ),
     ]

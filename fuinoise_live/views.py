@@ -1,13 +1,16 @@
+from datetime import datetime
+from typing import Any
 from zoneinfo import ZoneInfo
 
-from django.db.models import Prefetch
+from django.db.models import Prefetch, QuerySet
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, render
 from django.utils import formats, timezone
 
 from .models import Event, RaidSlot
 
 
-def published_events():
+def published_events() -> QuerySet[Event]:
     slots = RaidSlot.objects.select_related("streamer").order_by("start", "id")
     return (
         Event.objects.filter(publication_status=Event.PublicationStatus.PUBLISHED)
@@ -17,7 +20,7 @@ def published_events():
     )
 
 
-def prepare_event(event, now):
+def prepare_event(event: Any, now: datetime) -> Any:
     """Classify by local calendar days, extending through the final slot day."""
     zone = ZoneInfo(event.event_time_zone)
     today = timezone.localtime(now, zone).date()
@@ -42,7 +45,7 @@ def prepare_event(event, now):
     return event
 
 
-def event_list(request, period):
+def event_list(request: HttpRequest, period: str) -> HttpResponse:
     now = timezone.now()
     events = [
         event
@@ -63,19 +66,19 @@ def event_list(request, period):
     )
 
 
-def current_events(request):
+def current_events(request: HttpRequest) -> HttpResponse:
     return event_list(request, "current")
 
 
-def upcoming_events(request):
+def upcoming_events(request: HttpRequest) -> HttpResponse:
     return event_list(request, "upcoming")
 
 
-def historical_events(request):
+def historical_events(request: HttpRequest) -> HttpResponse:
     return event_list(request, "history")
 
 
-def event_detail(request, pk):
+def event_detail(request: HttpRequest, pk: int) -> HttpResponse:
     event = get_object_or_404(published_events(), pk=pk)
     return render(
         request,

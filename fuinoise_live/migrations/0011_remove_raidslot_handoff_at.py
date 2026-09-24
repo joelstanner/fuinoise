@@ -6,12 +6,12 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('fuinoise_live', '0010_alter_streamer_display_name_and_more'),
+        ("fuinoise_live", "0010_alter_streamer_display_name_and_more"),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='raidslot',
-            name='handoff_at',
+            model_name="raidslot",
+            name="handoff_at",
         ),
     ]

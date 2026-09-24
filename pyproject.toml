@@ -1,7 +1,7 @@
 [tool.black]
 line-length = 88
 target-version = ["py313"]
-extend-exclude = "^(build|dist|venv|fuinoise_live/migrations)/"
+extend-exclude = "/(build|dist|venv|fuinoise_live/migrations)/"
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = "fuinoise.settings"
@@ -11,12 +11,6 @@ addopts = "--cov=fuinoise_live --cov-report=term-missing"
 
 [tool.coverage.run]
 omit = ["fuinoise_live/migrations/*", "fuinoise_live/tests/*"]
-
-[tool.isort]
-profile = "black"
-line_length = 88
-known_first_party = ["fuinoise", "fuinoise_live"]
-skip = ["build", "dist", "venv", "fuinoise_live/migrations"]
 
 [tool.mypy]
 python_version = "3.13"
