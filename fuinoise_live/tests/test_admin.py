@@ -3,55 +3,17 @@ from zoneinfo import ZoneInfo
 
 from django.contrib import admin
 from django.contrib.auth import get_user_model
-from django.db import IntegrityError, connection
-from django.db.migrations.executor import MigrationExecutor
-from django.test import TestCase, TransactionTestCase
+from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from .admin import RaidSlotInlineForm
-from .models import (
-    Community,
-    CommunityMembership,
-    Event,
-    Genre,
-    Instrument,
-    RaidSlot,
-    Streamer,
-    WeeklyAvailability,
-)
+from fuinoise_live.admin import RaidSlotInlineForm
+from fuinoise_live.models import Community, Event, RaidSlot, Streamer
+
+from .helpers import create_event
 
 
-def create_event(**kwargs):
-    community, _ = Community.objects.get_or_create(
-        slug="fuinoise", defaults={"name": "Fuinoise"}
-    )
-    return Event.objects.create(community=community, **kwargs)
-
-
-class StreamerIdentityTests(TestCase):
-    def test_login_and_url_follow_twitch_identity(self):
-        streamer = Streamer.objects.create(
-            display_name="Fuinoise name",
-            twitch_display_name="Twitch Name",
-            twitch_username="  TwitchName  ",
-            twitch_id="9876543210",
-        )
-        self.assertEqual(streamer.twitch_username, "twitchname")
-        self.assertEqual(streamer.twitch_url, "https://www.twitch.tv/twitchname")
-        self.assertEqual(streamer.display_name, "Fuinoise name")
-        self.assertEqual(streamer.twitch_display_name, "Twitch Name")
-        streamer.twitch_username = "NewName"
-        streamer.save()
-        self.assertEqual(streamer.twitch_url, "https://www.twitch.tv/newname")
-
-    def test_login_is_unique_regardless_of_case(self):
-        Streamer.objects.create(display_name="First", twitch_username="first")
-        with self.assertRaises(IntegrityError):
-            Streamer.objects.create(display_name="Second", twitch_username="FIRST")
-
-
-class AdminSmokeTests(TestCase):
+class EventAdminTests(TestCase):
     def test_event_change_page_renders(self):
         user = get_user_model().objects.create_superuser(
             username="admin", email="admin@example.com", password="test-password"
@@ -75,7 +37,7 @@ class AdminSmokeTests(TestCase):
             display_name="First",
             twitch_username="first",
         )
-        slot = RaidSlot.objects.create(
+        RaidSlot.objects.create(
             event=event,
             streamer=streamer,
             start=datetime.datetime(2026, 9, 23, 20, tzinfo=datetime.timezone.utc),
@@ -90,25 +52,14 @@ class AdminSmokeTests(TestCase):
             )
             self.assertEqual(response.status_code, 200)
             slot_form = response.context["inline_admin_formsets"][0].formset.forms[0]
-            self.assertEqual(slot_form["start_date"].value(), datetime.date(2026, 9, 23))
+            self.assertEqual(
+                slot_form["start_date"].value(), datetime.date(2026, 9, 23)
+            )
             self.assertEqual(slot_form["start_time"].value(), "01:00 PM")
             self.assertNotContains(response, "Enter times in the UTC timezone")
             self.assertContains(response, "raid_slot_note")
             self.assertContains(response, "replay_url")
             self.assertEqual(str(timezone.get_current_timezone()), "US/Eastern")
-
-    def test_start_time_is_unique_per_event(self):
-        event = create_event(date=datetime.date(2026, 9, 23))
-        streamer = Streamer.objects.create(
-            display_name="First",
-            twitch_username="first",
-        )
-        start = datetime.datetime(2026, 9, 23, tzinfo=datetime.timezone.utc)
-        RaidSlot.objects.create(event=event, streamer=streamer, start=start)
-        with self.assertRaises(IntegrityError):
-            RaidSlot.objects.create(
-                event=event, streamer=streamer, start=start
-            )
 
     def test_local_start_rejects_daylight_saving_gap_and_overlap(self):
         event = create_event(
@@ -137,9 +88,7 @@ class AdminSmokeTests(TestCase):
             for hour in (20, 21)
         ]
         slots = [
-            RaidSlot.objects.create(
-                event=event, streamer=streamer, start=start
-            )
+            RaidSlot.objects.create(event=event, streamer=streamer, start=start)
             for i, start in enumerate(starts, 1)
         ]
         self.client.force_login(user)
@@ -400,7 +349,7 @@ class CommunityAdminWorkflowTests(TestCase):
         add_form = add_page.context["adminform"].form
         self.assertEqual(add_form["event_time_zone"].value(), "")
         self.assertIn(
-            f'&quot;{community.pk}&quot;: &quot;US/Pacific&quot;',
+            f"&quot;{community.pk}&quot;: &quot;US/Pacific&quot;",
             str(add_form["community"]),
         )
         self.assertContains(add_page, "fuinoise_live/event_admin.js")
@@ -453,103 +402,3 @@ class CommunityAdminWorkflowTests(TestCase):
         self.assertEqual(community.website, "https://example.com/new-home")
         self.assertEqual(community.logo_url, "https://example.com/new-logo.png")
         self.assertEqual(event.community, community)
-
-
-class MusicianRaidDataTests(TestCase):
-    def test_removing_streamer_keeps_scheduled_time_open(self):
-        event = create_event(date=datetime.date(2026, 9, 23))
-        streamer = Streamer.objects.create(
-            display_name="First", twitch_username="first"
-        )
-        slot = RaidSlot.objects.create(
-            event=event,
-            streamer=streamer,
-            start=datetime.datetime(2026, 9, 23, 20, tzinfo=datetime.timezone.utc),
-        )
-
-        streamer.delete()
-        slot.refresh_from_db()
-        self.assertIsNone(slot.streamer)
-        self.assertIn("Open slot", str(slot))
-
-    def test_musician_profile_schedule_and_membership(self):
-        event = create_event(date=datetime.date(2026, 9, 23))
-        streamer = Streamer.objects.create(
-            display_name="Musician",
-            twitch_username="musician",
-            time_zone="US/Pacific",
-            raid_availability="limited",
-            raid_preferences="Ask before 8pm",
-        )
-        streamer.instruments.add(Instrument.objects.create(name="Guitar"))
-        streamer.genres.add(Genre.objects.create(name="Jazz"))
-        WeeklyAvailability.objects.create(
-            streamer=streamer,
-            day_of_week=2,
-            start_time=datetime.time(18),
-            end_time=datetime.time(21),
-        )
-        CommunityMembership.objects.create(
-            community=event.community, streamer=streamer, role="Member"
-        )
-        self.assertEqual(streamer.communities.get(), event.community)
-        self.assertEqual(streamer.instruments.get().name, "Guitar")
-        self.assertEqual(streamer.genres.get().name, "Jazz")
-        self.assertEqual(
-            streamer.weekly_availability.get().get_day_of_week_display(), "Wednesday"
-        )
-
-class PositionMigrationTests(TransactionTestCase):
-    def test_backfill_uses_start_then_id_within_each_event(self):
-        executor = MigrationExecutor(connection)
-        before = [("fuinoise_live", "0002_alter_event_event_time_zone")]
-        after = [
-            (
-                "fuinoise_live",
-                "0008_alter_raidslot_streamer",
-            )
-        ]
-        executor.migrate(before)
-        old_apps = executor.loader.project_state(before).apps
-        OldEvent = old_apps.get_model("fuinoise_live", "Event")
-        OldStreamer = old_apps.get_model("fuinoise_live", "Streamer")
-        OldSlot = old_apps.get_model("fuinoise_live", "RaidSlot")
-        event = OldEvent.objects.create(date=datetime.date(2026, 9, 23))
-        other = OldEvent.objects.create(date=datetime.date(2026, 9, 24))
-        streamer = OldStreamer.objects.create(
-            display_name="First",
-            twitch_username="First",
-            twitch_url="https://twitch.tv/first",
-            twitch_id=123456789,
-        )
-        late = datetime.datetime(2026, 9, 23, 21, tzinfo=datetime.timezone.utc)
-        early = datetime.datetime(2026, 9, 23, 20, tzinfo=datetime.timezone.utc)
-        first = OldSlot.objects.create(event=event, streamer=streamer, start=late)
-        second = OldSlot.objects.create(event=event, streamer=streamer, start=early)
-        third = OldSlot.objects.create(event=event, streamer=streamer, start=early)
-        fourth = OldSlot.objects.create(event=other, streamer=streamer, start=late)
-
-        executor = MigrationExecutor(connection)
-        executor.migrate(after)
-        NewSlot = executor.loader.project_state(after).apps.get_model(
-            "fuinoise_live", "RaidSlot"
-        )
-        self.assertEqual(
-            list(
-                NewSlot.objects.filter(event_id=event.pk).values_list("id", "position")
-            ),
-            [(second.pk, 1), (third.pk, 2), (first.pk, 3)],
-        )
-        self.assertEqual(NewSlot.objects.get(pk=fourth.pk).position, 1)
-        NewStreamer = executor.loader.project_state(after).apps.get_model(
-            "fuinoise_live", "Streamer"
-        )
-        migrated_streamer = NewStreamer.objects.get(pk=streamer.pk)
-        self.assertEqual(migrated_streamer.twitch_id, "123456789")
-        self.assertEqual(migrated_streamer.twitch_username, "first")
-        NewEvent = executor.loader.project_state(after).apps.get_model(
-            "fuinoise_live", "Event"
-        )
-        self.assertEqual(NewEvent.objects.get(pk=event.pk).community.slug, "fuinoise")
-        self.assertEqual(NewEvent.objects.get(pk=other.pk).community.slug, "fuinoise")
-        self.assertEqual(NewEvent.objects.get(pk=event.pk).publication_status, "draft")

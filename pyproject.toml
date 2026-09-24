@@ -3,6 +3,15 @@ line-length = 88
 target-version = ["py313"]
 extend-exclude = "^(build|dist|venv|fuinoise_live/migrations)/"
 
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "fuinoise.settings"
+testpaths = ["fuinoise_live/tests"]
+python_files = ["test_*.py"]
+addopts = "--cov=fuinoise_live --cov-report=term-missing"
+
+[tool.coverage.run]
+omit = ["fuinoise_live/migrations/*", "fuinoise_live/tests/*"]
+
 [tool.isort]
 profile = "black"
 line_length = 88
@@ -24,7 +33,7 @@ show_error_codes = true
 exclude = '^(build|dist|venv|fuinoise_live/migrations)/'
 
 [[tool.mypy.overrides]]
-module = ["fuinoise_live.tests", "fuinoise_live.test_upgrade"]
+module = ["fuinoise_live.tests.*"]
 disallow_untyped_defs = false
 check_untyped_defs = false
 

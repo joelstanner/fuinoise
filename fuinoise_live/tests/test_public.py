@@ -4,7 +4,7 @@ from unittest.mock import patch
 from django.test import TestCase
 from django.urls import reverse
 
-from .models import Community, Event, RaidSlot, Streamer
+from fuinoise_live.models import Community, Event, RaidSlot, Streamer
 
 UTC = datetime.timezone.utc
 

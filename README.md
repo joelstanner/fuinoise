@@ -25,3 +25,13 @@ venv/bin/black --check .
 venv/bin/isort --check-only fuinoise fuinoise_live manage.py
 venv/bin/mypy fuinoise fuinoise_live
 ```
+
+## Tests
+
+Install the development dependencies, then run the Django tests with pytest.
+Coverage for application code is shown in the terminal:
+
+```sh
+venv/bin/python -m pip install -r requirements-dev.txt
+venv/bin/python -m pytest
+```

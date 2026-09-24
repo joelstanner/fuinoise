@@ -1,6 +1,9 @@
 # Compiled Python files
 __pycache__/
 *.pyc
+.pytest_cache/
+.coverage
+htmlcov/
 
 # Django-related
 *.log
