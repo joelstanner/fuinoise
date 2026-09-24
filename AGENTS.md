@@ -13,6 +13,7 @@
 
 ## Verification
 
+- Before committing, run `venv/bin/black --check .`, `venv/bin/ruff check .`, and `venv/bin/mypy fuinoise fuinoise_live`.
 - Run `venv/bin/python manage.py check` and `venv/bin/python manage.py test` after Django code changes.
 - After model changes, run `venv/bin/python manage.py makemigrations --check --dry-run`; add a migration when the model state changes.
 - Use the test database for verification. Do not alter the local SQLite database just to run checks.

@@ -26,6 +26,10 @@ venv.bak/
 
 # IDE-specific
 .vscode/
+!.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 .idea/
 
 # Compiled files
