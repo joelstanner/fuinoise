@@ -1,3 +1,6 @@
+import json
+import re
+from datetime import datetime, timedelta, timezone as datetime_timezone
 from zoneinfo import ZoneInfo
 
 from django import forms
@@ -18,14 +21,95 @@ from .models import (
 )
 
 
+class EventLocalTimeField(forms.TimeField):
+    def to_python(self, value):
+        if isinstance(value, str):
+            shorthand = re.fullmatch(
+                r"\s*(\d{1,2})(?::(\d{2}))?\s*([ap])m?\s*", value, re.IGNORECASE
+            )
+            if shorthand:
+                hour, minute, meridian = shorthand.groups()
+                value = f"{hour}:{minute or '00'} {meridian.upper()}M"
+        return super().to_python(value)
+
+
 class RaidSlotInlineForm(forms.ModelForm):
+    start_date = forms.DateField(
+        label="Date",
+        required=False,
+        widget=forms.DateInput(attrs={"type": "date"}),
+        help_text="Defaults to the event date; change for an overnight slot.",
+    )
+    start_time = EventLocalTimeField(
+        label="Start time (event time zone)",
+        required=False,
+        input_formats=[
+            "%I:%M %p",
+            "%I:%M:%S %p",
+            "%I:%M:%S.%f %p",
+            "%H:%M",
+            "%H:%M:%S",
+            "%H:%M:%S.%f",
+        ],
+        widget=forms.TextInput(attrs={"placeholder": "11a or 11:30 AM", "size": 12}),
+        help_text="Enter a time such as 11a or 11:30 AM in the event time zone above.",
+    )
+
     class Meta:
         model = RaidSlot
-        fields = "__all__"
+        exclude = ("start",)
 
     def __init__(self, *args, **kwargs):
+        self.event = kwargs.pop("event", None)
         super().__init__(*args, **kwargs)
         self.fields["streamer"].empty_label = "Open slot"
+        if self.instance.pk and self.event:
+            local_start = timezone.localtime(
+                self.instance.start, ZoneInfo(self.event.event_time_zone)
+            )
+            self.initial["start_date"] = local_start.date()
+            if local_start.microsecond:
+                time_format = "%I:%M:%S.%f %p"
+            elif local_start.second:
+                time_format = "%I:%M:%S %p"
+            else:
+                time_format = "%I:%M %p"
+            self.initial["start_time"] = local_start.strftime(time_format)
+        elif self.event and self.event.date:
+            self.initial["start_date"] = self.event.date
+
+    def has_changed(self):
+        if not self.instance.pk and self.changed_data == ["start_date"]:
+            return False
+        return super().has_changed()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.cleaned_data.get("DELETE"):
+            return cleaned_data
+        start_date = cleaned_data.get("start_date") or (
+            self.event.date if self.event else None
+        )
+        start_time = cleaned_data.get("start_time")
+        if not start_time:
+            self.add_error("start_time", "Enter a start time.")
+        if not start_date or not start_time or not self.event:
+            return cleaned_data
+        zone = ZoneInfo(self.event.event_time_zone)
+        wall_time = datetime.combine(start_date, start_time)
+        local_start = wall_time.replace(tzinfo=zone)
+        if local_start.astimezone(datetime_timezone.utc).astimezone(zone).replace(
+            tzinfo=None
+        ) != wall_time:
+            self.add_error("start_time", "This time does not exist in the event time zone.")
+        elif local_start.utcoffset() != wall_time.replace(
+            tzinfo=zone, fold=1
+        ).utcoffset():
+            self.add_error("start_time", "This time is ambiguous in the event time zone.")
+        else:
+            self.instance.start = local_start
+            cleaned_data["start"] = local_start
+        return cleaned_data
 
     def validate_constraints(self):
         # Swaps are checked against the final formset state and saved atomically.
@@ -33,82 +117,120 @@ class RaidSlotInlineForm(forms.ModelForm):
 
 
 class RaidSlotInlineFormSet(BaseInlineFormSet):
+    def get_form_kwargs(self, index):
+        return {**super().get_form_kwargs(index), "event": self.instance}
+
     def clean(self):
-        super().clean()
-        positions = set()
+        starts = set()
         for form in self.forms:
             if not form.cleaned_data or form.cleaned_data.get("DELETE"):
                 continue
-            position = form.cleaned_data.get("position")
-            if position is None:
+            start = form.cleaned_data.get("start")
+            if start is None:
                 continue
-            if position in positions:
-                raise forms.ValidationError("Each slot needs a distinct position.")
-            positions.add(position)
+            if start in starts:
+                raise forms.ValidationError(
+                    "Each lineup slot needs a different start time."
+                )
+            starts.add(start)
+        super().clean()
 
     def save(self, commit=True):
         if not commit:
             return super().save(commit=False)
-        # Temporarily move existing rows so positions can be swapped.
+        # Move existing rows out of the way so start times can be swapped.
         with transaction.atomic():
             existing = list(self.get_queryset())
-            temporary_start = (
-                max(
-                    [slot.position for slot in existing]
-                    + [form.cleaned_data.get("position", 0) or 0 for form in self.forms]
-                    + [0]
+            initial_forms = set(self.initial_forms)
+            active_forms = [
+                form
+                for form in self.forms
+                if form.cleaned_data
+                and not form.cleaned_data.get("DELETE")
+                and (form in initial_forms or form.has_changed())
+            ]
+            if existing:
+                last_start = max(
+                    [slot.start for slot in existing]
+                    + [form.cleaned_data["start"] for form in active_forms]
                 )
-                + 1
-            )
-            for offset, slot in enumerate(existing):
-                RaidSlot.objects.filter(pk=slot.pk).update(
-                    position=temporary_start + offset
-                )
+                for offset, slot in enumerate(existing, 1):
+                    RaidSlot.objects.filter(pk=slot.pk).update(
+                        start=last_start + timedelta(days=1, seconds=offset),
+                    )
             self.changed_objects = []
             self.deleted_objects = []
+            self.new_objects = []
             saved = []
             for form in self.initial_forms:
                 if form in self.deleted_forms:
                     self.deleted_objects.append(form.instance)
                     form.instance.delete()
-                else:
+            for form in active_forms:
+                if form in initial_forms:
                     if form.has_changed():
                         self.changed_objects.append((form.instance, form.changed_data))
                     saved.append(form.save())
-            saved.extend(self.save_new_objects())
+                else:
+                    new_slot = self.save_new(form)
+                    self.new_objects.append(new_slot)
+                    saved.append(new_slot)
             return saved
 
 
 class RaidSlotInline(admin.TabularInline):
     model = RaidSlot
+    verbose_name = "lineup slot"
+    verbose_name_plural = "Lineup slots — edit the schedule here"
     form = RaidSlotInlineForm
     formset = RaidSlotInlineFormSet
-    ordering = ("position", "id")
+    ordering = ("start", "id")
     autocomplete_fields = ("streamer",)
     fields = (
-        "position",
         "streamer",
-        "start",
-        "handoff_at",
-        "event_time_in_event_timezone",
+        "start_date",
+        "start_time",
         "raid_slot_note",
         "replay_url",
     )
-    readonly_fields = ("event_time_in_event_timezone",)
     extra = 1
 
-    @admin.display(description="Event local time")
-    def event_time_in_event_timezone(self, slot: RaidSlot) -> str:
-        if not slot.start or not slot.event_id:
-            return "—"
-        local_start = timezone.localtime(
-            slot.start, ZoneInfo(slot.event.event_time_zone)
-        )
-        return local_start.strftime("%-I:%M %p %Z")
+
+class EventAdminForm(forms.ModelForm):
+    class Meta:
+        model = Event
+        fields = "__all__"
+
+    class Media:
+        js = ("fuinoise_live/event_admin.js",)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not self.instance.pk:
+            self.fields["event_time_zone"].required = False
+            self.initial["event_time_zone"] = ""
+            self.fields["event_time_zone"].help_text = (
+                "Defaults to the selected community’s time zone; choose another for this event."
+            )
+            community_widget = self.fields["community"].widget
+            if hasattr(community_widget, "widget"):
+                community_widget = community_widget.widget
+            community_widget.attrs["data-community-time-zones"] = json.dumps(
+                dict(Community.objects.values_list("pk", "default_time_zone"))
+            )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if not self.instance.pk and not cleaned_data.get("event_time_zone"):
+            community = cleaned_data.get("community")
+            if community:
+                cleaned_data["event_time_zone"] = community.default_time_zone
+        return cleaned_data
 
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
+    form = EventAdminForm
     inlines = (RaidSlotInline,)
     list_display = (
         "name",
@@ -174,29 +296,9 @@ class StreamerAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(RaidSlot)
-class RaidSlotAdmin(admin.ModelAdmin):
-    list_display = (
-        "event",
-        "position",
-        "streamer",
-        "start",
-        "handoff_at",
-        "raid_slot_note",
-        "replay_url",
-    )
-    list_filter = ("event", "start")
-    search_fields = (
-        "event__name",
-        "streamer__display_name",
-        "streamer__twitch_username",
-    )
-    ordering = ("event", "position")
-
-
 @admin.register(Community)
 class CommunityAdmin(admin.ModelAdmin):
-    list_display = ("name", "slug", "website", "logo_url")
+    list_display = ("name", "slug", "default_time_zone", "website", "logo_url")
     search_fields = ("name", "slug", "description")
     prepopulated_fields = {"slug": ("name",)}
 

@@ -1,7 +1,6 @@
 import zoneinfo
 
 from django.contrib import admin
-from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models.functions import Lower
 
@@ -29,6 +28,12 @@ class Genre(models.Model):
 class Community(models.Model):
     name = models.CharField(max_length=120, unique=True)
     slug = models.SlugField(unique=True)
+    default_time_zone = models.CharField(
+        "Default raid event time zone",
+        max_length=80,
+        choices=timezone_choices,
+        default="GMT",
+    )
     description = models.TextField(blank=True, default="")
     website = models.URLField(blank=True, default="")
     logo_url = models.URLField(blank=True, default="")
@@ -42,9 +47,20 @@ class Community(models.Model):
 
 class Streamer(models.Model):
     # Organizer-chosen name, independent of the Twitch account's display name.
-    display_name = models.CharField(max_length=80, unique=True)
+    display_name = models.CharField(
+        "Name shown on Fuinoise",
+        max_length=80,
+        unique=True,
+        help_text="This is the name visitors see on event pages.",
+    )
     twitch_username = models.CharField(max_length=80, unique=True)
-    twitch_display_name = models.CharField(max_length=80, default="", blank=True)
+    twitch_display_name = models.CharField(
+        "Name shown on Twitch",
+        max_length=80,
+        default="",
+        blank=True,
+        help_text="The display name shown on the streamer's Twitch profile.",
+    )
     homepage = models.URLField(default="", blank=True)
     twitch_id = models.CharField(max_length=32, blank=True, null=True, unique=True)
     instruments = models.ManyToManyField(
@@ -132,13 +148,7 @@ class RaidSlot(models.Model):
         help_text="Leave blank for an open time slot; change this to move a streamer.",
     )
     event = models.ForeignKey(Event, on_delete=models.CASCADE)
-    position = models.PositiveIntegerField(help_text="Order within this event")
     start = models.DateTimeField()
-    handoff_at = models.DateTimeField(
-        blank=True,
-        null=True,
-        help_text="Planned raid handoff time; leave blank until known",
-    )
     replay_url = models.URLField(default="", blank=True)
     raid_slot_note = models.CharField(
         "Notes",
@@ -148,19 +158,12 @@ class RaidSlot(models.Model):
     )
 
     class Meta:
-        ordering = ["event_id", "position", "id"]
+        ordering = ["event_id", "start", "id"]
         constraints = [
             models.UniqueConstraint(
-                fields=["event", "position"], name="unique_raid_slot_event_position"
-            )
+                fields=["event", "start"], name="unique_raid_slot_event_start"
+            ),
         ]
-
-    def clean(self):
-        super().clean()
-        if self.handoff_at and self.start and self.handoff_at <= self.start:
-            raise ValidationError(
-                {"handoff_at": "Handoff must be after the slot start."}
-            )
 
     def __str__(self) -> str:
         streamer_name = self.streamer.display_name if self.streamer else "Open slot"

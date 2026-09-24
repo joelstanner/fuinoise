@@ -22,10 +22,10 @@
       <ol class="slot-list">
         {% for slot in event.public_slots %}
           <li class="slot">
-            <span class="slot-position">{{ slot.position|stringformat:"02d" }}</span>
+            <span class="slot-position">{{ forloop.counter|stringformat:"02d" }}</span>
             <div class="slot-main">
               {% if slot.streamer %}<h3><a href="{{ slot.streamer.twitch_url }}" rel="noopener noreferrer">{{ slot.streamer.display_name }}</a></h3>{% else %}<h3 class="open-slot">Open slot</h3>{% endif %}
-              <p><time datetime="{{ slot.local_start_iso }}">{{ slot.local_start_display }}</time>{% if slot.local_handoff %} – <time datetime="{{ slot.local_handoff_iso }}">{{ slot.local_handoff_display }}</time>{% endif %}</p>
+              <p><time datetime="{{ slot.local_start_iso }}">{{ slot.local_start_display }}</time></p>
               {% if slot.raid_slot_note %}<p class="slot-note">{{ slot.raid_slot_note }}</p>{% endif %}
             </div>
             {% if slot.replay_url %}<a class="text-link" href="{{ slot.replay_url }}" rel="noopener noreferrer">Replay ↗</a>{% endif %}

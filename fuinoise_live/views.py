@@ -8,7 +8,7 @@ from .models import Event, RaidSlot
 
 
 def published_events():
-    slots = RaidSlot.objects.select_related("streamer").order_by("position", "id")
+    slots = RaidSlot.objects.select_related("streamer").order_by("start", "id")
     return (
         Event.objects.filter(publication_status=Event.PublicationStatus.PUBLISHED)
         .select_related("community")
@@ -33,16 +33,6 @@ def prepare_event(event, now):
         )
         slot.local_start_iso = slot.local_start.isoformat()
         last_day = max(last_day, slot.local_start.date())
-        if slot.handoff_at:
-            slot.local_handoff = timezone.localtime(slot.handoff_at, zone)
-            slot.local_handoff_display = formats.date_format(
-                slot.local_handoff, "D, M j · g:i A T", use_l10n=False
-            )
-            slot.local_handoff_iso = slot.local_handoff.isoformat()
-            last_day = max(last_day, slot.local_handoff.date())
-        else:
-            slot.local_handoff = None
-
     if today < event.date:
         event.public_period = "upcoming"
     elif today <= last_day:

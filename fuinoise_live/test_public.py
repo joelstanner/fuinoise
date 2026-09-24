@@ -95,7 +95,7 @@ class PublicEventTests(TestCase):
             )
 
     @patch("fuinoise_live.views.timezone.now")
-    def test_overnight_slot_extends_current_event(self, now):
+    def test_overnight_slot_start_extends_current_event(self, now):
         published = event("Overnight", datetime.date(2026, 9, 23), "US/Pacific")
         musician = Streamer.objects.create(
             display_name="Musician", twitch_username="musician"
@@ -103,9 +103,7 @@ class PublicEventTests(TestCase):
         RaidSlot.objects.create(
             event=published,
             streamer=musician,
-            position=1,
-            start=datetime.datetime(2026, 9, 24, 6, tzinfo=UTC),
-            handoff_at=datetime.datetime(2026, 9, 24, 9, tzinfo=UTC),
+            start=datetime.datetime(2026, 9, 24, 9, tzinfo=UTC),
         )
         now.return_value = datetime.datetime(2026, 9, 25, 6, 59, tzinfo=UTC)
         self.assertContains(self.client.get(reverse("current_events")), published.name)
@@ -115,7 +113,7 @@ class PublicEventTests(TestCase):
         )
 
     @patch("fuinoise_live.views.timezone.now")
-    def test_detail_renders_branding_local_times_and_position_order(self, now):
+    def test_detail_renders_branding_local_times_and_start_order(self, now):
         now.return_value = datetime.datetime(2026, 9, 23, 20, tzinfo=UTC)
         published = event("Jazz relay", datetime.date(2026, 9, 23), "US/Pacific")
         published.organizer_notes = "Do not publish this"
@@ -129,7 +127,6 @@ class PublicEventTests(TestCase):
         RaidSlot.objects.create(
             event=published,
             streamer=second,
-            position=2,
             start=datetime.datetime(2026, 9, 23, 20, tzinfo=UTC),
             raid_slot_note="Piano set",
             replay_url="https://example.com/replay",
@@ -137,13 +134,11 @@ class PublicEventTests(TestCase):
         RaidSlot.objects.create(
             event=published,
             streamer=first,
-            position=1,
             start=datetime.datetime(2026, 9, 23, 21, tzinfo=UTC),
         )
         RaidSlot.objects.create(
             event=published,
             streamer=None,
-            position=3,
             start=datetime.datetime(2026, 9, 23, 22, tzinfo=UTC),
         )
 
@@ -159,14 +154,14 @@ class PublicEventTests(TestCase):
         self.assertContains(response, "https://example.com/replay")
         self.assertNotContains(response, "Do not publish this")
         self.assertLess(
-            response.content.index(b"First musician"),
             response.content.index(b"Second musician"),
+            response.content.index(b"First musician"),
         )
 
         listing = self.client.get(reverse("current_events"))
         self.assertContains(listing, "Open slot")
         self.assertContains(listing, "First musician")
         self.assertLess(
-            listing.content.index(b"First musician"),
             listing.content.index(b"Second musician"),
+            listing.content.index(b"First musician"),
         )
