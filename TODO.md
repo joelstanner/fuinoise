@@ -40,6 +40,11 @@ Keep `Event`, `Streamer`, and `RaidSlot`, their existing data, and the current m
 
 ## Ideas
 
+### Create an event from a pasted lineup
+
+- Add an organizer text field that accepts a pasted schedule such as `*07.09.2026* Pre-Pary: P_chops 10a: 11a: ActuallySparky 12p: 1p: 2p: RottingCircuits 3p: Karmalizing 4p: Vjpcat 5p: 6p: 7p: JaniceRoberta 8p: 9p: Mroovki 10p:`.
+- Parse the event date, title, time labels, and streamer names; pre-populate the event and slots in the community’s time zone. Keep empty time labels as open slots and let the organizer review ambiguous text and streamer matches before saving.
+
 ### Refactor Admin and public front ends
 
 - Plan a substantial redesign of the organizer Admin workflow and public pages as the product grows.
