@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Fuinoise{% endblock %} · Fuinoise</title>
   <link rel="stylesheet" href="{% static 'fuinoise_live/site.css' %}">
+  {% block extra_head %}{% endblock %}
 </head>
 <body>
   <header class="site-header">
@@ -16,6 +17,7 @@
         <a href="{% url 'upcoming_events' %}">Upcoming</a>
         <a href="{% url 'historical_events' %}">History</a>
         <a href="{% url 'account_home' %}">{% if user.is_authenticated %}Your account{% else %}Sign in{% endif %}</a>
+        {% if perms.fuinoise_live.change_event and perms.fuinoise_live.change_raidslot %}<a href="{% url 'organizer_workspace' %}">Organize</a>{% endif %}
       </nav>
     </div>
   </header>

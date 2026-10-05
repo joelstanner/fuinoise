@@ -2,8 +2,8 @@
 
 Streamers can now submit preferred slots, review their requests and confirmed
 performances, withdraw requests, and cancel individual performances. Organizer
-assignment operations are implemented in the backend; the React Timeline and
-its API are the next milestone. Discord notifications remain milestone 6.
+assignment operations are available in the React Timeline and its API; see
+[workspace setup and usage](organizer-workspace.md). Discord notifications remain milestone 6.
 
 ## Streamer workflow
 
@@ -23,6 +23,11 @@ only when its explicit setting is enabled; only currently eligible streamers can
 open that early signup page. This does not expose the event on public routes or
 reveal private working schedule edits.
 
+For a new event, organizers explicitly release its reviewed signup timetable
+through **Open or update signup with this lineup**. This makes those choices
+available before public publication. Later working edits stay private until
+another explicit release or publication; early signup does not confirm assignments.
+
 One request is stored per event and streamer. Updating preferences replaces the
 previous choices; withdrawn or declined requests can be resubmitted. The server
 checks both the request version and the published schedule version before saving.
@@ -36,8 +41,8 @@ removed, and the dashboard marks that schedule change.
 
 ## Assignment and publication operations
 
-`fuinoise_live/requests.py` provides the operations that the upcoming organizer
-API will call:
+`fuinoise_live/requests.py` provides the operations used by the streamer views
+and organizer API:
 
 - `save_slot_request` accepts preferred published slot IDs, private notes, and
   expected request and schedule versions for a verified, eligible streamer.
@@ -101,6 +106,7 @@ submission, private assignment visibility, publication, cancellation, and
 withdrawal on desktop and phone layouts. The local SQLite database is untouched.
 
 Live Twitch and Discord rehearsal still needs the configuration described in
-[account setup](accounts-and-eligibility.md). Organizer browser assignment will
-be verified when the React Timeline is implemented. Notification delivery and
+[account setup](accounts-and-eligibility.md). Organizer browser checks now cover
+drag assignment, keyboard controls, save failure recovery, publication, and
+cancellation followed by a stale draft. Notification delivery and
 the real-event pilot remain release requirements.

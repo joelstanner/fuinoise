@@ -17,12 +17,21 @@ still needs credentials and the Fuinoise server configuration; see
 [account setup](accounts-and-eligibility.md). Streamer requests, confirmed-assignment
 dashboards, cancellation, and backend organizer assignment operations are now
 implemented; see [workflow details](requests-and-assignments.md). The custom
-Timeline, scheduling API endpoints, and notification delivery remain future
-milestones.
+React Timeline and Django REST Framework API are implemented; see
+[workspace documentation](organizer-workspace.md). Import, public enrichment,
+notification delivery, deployment, and the pilot remain future milestones.
 
 Milestone 1 is implemented and verified with Django tests, including migration
 preservation, draft privacy, complete interval validation, stale writes, atomic
 rollback, and cancellation followed by an old publication attempt.
+
+Milestone 4 is implemented with event creation and editing, request assignment,
+drag movement, keyboard controls, private autosaves, explicit publication,
+reviewed early signup release, legacy duration review, and stale-draft recovery.
+Browser verification covers those workflows, save failures and retry, and four
+desktop/phone widths. CI now runs the Python tests with an 80 percent coverage
+minimum, frontend checks and unit tests, a production build, and the isolated
+browser workflow. Milestone 5 is next.
 
 ## Implementation sequence
 
@@ -106,7 +115,7 @@ returns no new confirmations. Notification delivery is milestone 6.
 Maintenance Admin edits continue to update canonical records directly. They
 invalidate an existing working draft, including changes detected outside these
 operations. Admin is for maintenance; routine draft editing will use the custom
-Timeline. The event's early-signup policy is available in maintenance Admin and
+Timeline. The event's early-signup policy is available in the workspace and maintenance Admin and
 on new event records. The streamer signup page now uses this policy and keeps
 private working schedule edits hidden.
 

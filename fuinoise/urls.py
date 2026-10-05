@@ -18,9 +18,51 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
-from fuinoise_live import account_views, request_views, views
+from fuinoise_live import account_views, organizer_api, request_views, views
 
 urlpatterns = [
+    path(
+        "organizer/api/events/<int:pk>/signup/",
+        organizer_api.draft_action_api,
+        {"action": "signup"},
+        name="organizer_signup_api",
+    ),
+    path("organizer/", organizer_api.workspace, name="organizer_workspace"),
+    path(
+        "organizer/api/events/", organizer_api.events_api, name="organizer_events_api"
+    ),
+    path(
+        "organizer/api/events/<int:pk>/draft/",
+        organizer_api.draft_api,
+        name="organizer_draft_api",
+    ),
+    path(
+        "organizer/api/events/<int:pk>/publish/",
+        organizer_api.draft_action_api,
+        {"action": "publish"},
+        name="organizer_publish_api",
+    ),
+    path(
+        "organizer/api/events/<int:pk>/reset/",
+        organizer_api.draft_action_api,
+        {"action": "reset"},
+        name="organizer_reset_api",
+    ),
+    path(
+        "organizer/api/events/<int:pk>/assign/",
+        organizer_api.assignment_api,
+        name="organizer_assign_api",
+    ),
+    path(
+        "organizer/api/events/<int:pk>/requests/<int:request_id>/decline/",
+        organizer_api.decline_api,
+        name="organizer_decline_api",
+    ),
+    path(
+        "organizer/api/events/<int:pk>/visibility/",
+        organizer_api.visibility_api,
+        name="organizer_visibility_api",
+    ),
     path("", views.current_events, name="current_events"),
     path("upcoming/", views.upcoming_events, name="upcoming_events"),
     path("history/", views.historical_events, name="historical_events"),

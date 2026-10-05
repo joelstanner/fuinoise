@@ -8,7 +8,9 @@ Follow [the implementation plan](docs/mvp-implementation-plan.md) for milestone
 order and acceptance checks. The scheduling backend milestone is complete;
 accounts and eligibility are implemented, with live provider rehearsal pending
 configuration. Streamer requests, dashboards, cancellation, and backend organizer
-assignment operations are implemented. The React Timeline and its API are next.
+assignment operations, the React Timeline, and its API are implemented. Pasted
+import, Twitch information, and public visitor-local times are next; see
+[workspace documentation](docs/organizer-workspace.md).
 Assignments become confirmed to streamers on publication; draft edits send no
 confirmation. Notification delivery is still to be built.
 
@@ -16,8 +18,8 @@ confirmation. Notification delivery is still to be built.
 - [x] Add backend working schedule drafts, atomic explicit publication, configurable signup opening, and protection against publishing stale assignments after a cancellation.
 - [x] Implement Twitch sign-in, Discord account linking and server membership checks, organizer eligibility approval, and Discord requirement overrides. Setup and live-rehearsal steps are in [account documentation](docs/accounts-and-eligibility.md).
 - [ ] Configure Twitch and Discord credentials and the Fuinoise server, then complete live sign-in, linking, membership, and review verification on HTTPS.
-- [x] Add multiple-slot preferences, backend organizer assignment of multiple performances, streamer dashboards, and account-linked direct cancellation that reopens slots. The organizer browser controls arrive with the Timeline milestone; see [workflow documentation](docs/requests-and-assignments.md).
-- [ ] Build the React Timeline workspace and Django REST Framework endpoints: drag requests into slots, drag performances through time, show conflicts, edit details, and autosave valid drafts.
+- [x] Add multiple-slot preferences, organizer assignment of multiple performances, streamer dashboards, and account-linked direct cancellation that reopens slots. See [workflow documentation](docs/requests-and-assignments.md).
+- [x] Build the React Timeline workspace and Django REST Framework endpoints: event editing, drag assignment and performance movement, conflicts, detail controls, private autosaves, publication, reviewed early signup, and explicit stale-draft recovery. Browser checks cover save failures, keyboard controls, and phone layouts.
 - [ ] Add pasted-lineup import with review of parsed times and streamer matches. Keep empty time labels as open slots and require correction of ambiguous input.
 - [ ] Pull streamer information from Twitch and show live/offline status through a bounded service layer with failure handling. Keep local schedules readable during an outage.
 - [ ] Show event and visitor-local times on public schedules; verify essential workflows on phones and desktop browsers.

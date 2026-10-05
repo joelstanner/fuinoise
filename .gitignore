@@ -44,3 +44,5 @@ venv.bak/
 # Dependency directories
 env/
 lib/
+node_modules/
+fuinoise_live/static/fuinoise_live/organizer/

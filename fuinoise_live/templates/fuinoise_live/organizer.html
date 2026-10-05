@@ -1,0 +1,13 @@
+{% extends 'fuinoise_live/base.html' %}
+{% load static %}
+{% block title %}Organizer Timeline{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'fuinoise_live/organizer/workspace.css' %}">
+<script type="module" src="{% static 'fuinoise_live/organizer/workspace.js' %}"></script>
+{% endblock %}
+{% block content %}
+<div id="organizer-root" data-api="{% url 'organizer_events_api' %}" data-csrf="{{ csrf_token }}">
+  <p class="account-status">Loading the organizer Timeline… If it stays here, build the organizer frontend as described in the README.</p>
+</div>
+<noscript><p>The organizer Timeline needs JavaScript enabled. Public schedules and streamer signup are available without it.</p></noscript>
+{% endblock %}

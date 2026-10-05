@@ -271,14 +271,18 @@ def save_schedule_draft(
 
 
 @transaction.atomic
-def publish_schedule_draft(
-    draft_id: int, *, expected_version: int, actor: Any
+def _apply_schedule_draft(
+    draft_id: int, *, expected_version: int, actor: Any, for_signup: bool = False
 ) -> PublicationResult:
     _require_organizer(actor)
     draft = ScheduleDraft.objects.get(pk=draft_id)
     event = _lock_event(draft.event_id, draft.base_schedule_version)
     _assert_current(draft, event)
     _claim_draft(draft, expected_version)
+    if for_signup:
+        if event.publication_status == Event.PublicationStatus.PUBLISHED:
+            raise ValidationError("Signup is already open on this published event.")
+        draft.signup_before_publication = True
     draft.full_clean()
     slots = list(draft.slots.all())
     for slot in slots:
@@ -315,16 +319,24 @@ def publish_schedule_draft(
             RaidSlot.objects.filter(pk=old.pk).update(**values)
         if old is None or _values(old, SLOT_FIELDS) != values:
             changed.append(published.pk)
-        if slot.streamer_id is not None and (
-            old is None
-            or old.streamer_id != slot.streamer_id
-            or event.publication_status != Event.PublicationStatus.PUBLISHED
+        if (
+            not for_signup
+            and slot.streamer_id is not None
+            and (
+                old is None
+                or old.streamer_id != slot.streamer_id
+                or event.publication_status != Event.PublicationStatus.PUBLISHED
+            )
         ):
             confirmed.append(published.pk)
 
     Event.objects.filter(pk=event.pk).update(
         **_values(draft, EVENT_FIELDS),
-        publication_status=Event.PublicationStatus.PUBLISHED,
+        publication_status=(
+            Event.PublicationStatus.DRAFT
+            if for_signup
+            else Event.PublicationStatus.PUBLISHED
+        ),
         schedule_version=F("schedule_version") + 1,
     )
     event.refresh_from_db()
@@ -334,6 +346,25 @@ def publish_schedule_draft(
     return PublicationResult(
         event.pk, event.schedule_version, tuple(confirmed), tuple(changed)
     )
+
+
+def publish_schedule_draft(
+    draft_id: int, *, expected_version: int, actor: Any
+) -> PublicationResult:
+    result: PublicationResult = _apply_schedule_draft(
+        draft_id, expected_version=expected_version, actor=actor
+    )
+    return result
+
+
+def open_schedule_signup(
+    draft_id: int, *, expected_version: int, actor: Any
+) -> PublicationResult:
+    """Release a reviewed signup timetable without public visibility/confirmation."""
+    result: PublicationResult = _apply_schedule_draft(
+        draft_id, expected_version=expected_version, actor=actor, for_signup=True
+    )
+    return result
 
 
 @transaction.atomic
