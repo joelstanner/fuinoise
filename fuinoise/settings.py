@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from django.core.exceptions import ImproperlyConfigured
 
@@ -32,7 +33,11 @@ if not SECRET_KEY:
         raise ImproperlyConfigured("Set DJANGO_SECRET_KEY when debug is disabled.")
     SECRET_KEY = "django-insecure-local-development-only"
 
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+    if host.strip()
+]
 
 # Provider credentials stay in the environment. Callback URLs use a configured
 # origin, never a request's Host header.
@@ -51,6 +56,16 @@ SESSION_COOKIE_AGE = 12 * 60 * 60
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SAMESITE = "Lax"
+SECURE_SSL_REDIRECT = not DEBUG
+SECURE_HSTS_SECONDS = 3600 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+SECURE_HSTS_PRELOAD = False
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+if not DEBUG and os.environ.get("DJANGO_TRUST_PROXY") == "1":
+    # Enable only when a trusted proxy overwrites this header and the app server
+    # is inaccessible from the public network, as in deploy/Caddyfile.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 INTERNAL_IPS = [
     "127.0.0.1",
@@ -61,7 +76,6 @@ INTERNAL_IPS = [
 
 INSTALLED_APPS = [
     "rest_framework",
-    "debug_toolbar",
     "fuinoise_live.apps.FuinoiseLiveConfig",
     "django.contrib.admin",
     "django.contrib.auth",
@@ -82,7 +96,6 @@ REST_FRAMEWORK = {
 }
 
 MIDDLEWARE = [
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -93,6 +106,9 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "fuinoise.urls"
+if DEBUG:
+    INSTALLED_APPS.append("debug_toolbar")
+    MIDDLEWARE.insert(0, "debug_toolbar.middleware.DebugToolbarMiddleware")
 
 TEMPLATES = [
     {
@@ -116,10 +132,14 @@ WSGI_APPLICATION = "fuinoise.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+DATABASE_PATH = Path(
+    os.environ.get("FUINOISE_DATABASE_PATH", str(BASE_DIR / "db.sqlite3"))
+)
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": DATABASE_PATH,
+        "OPTIONS": {"timeout": 20, "transaction_mode": "IMMEDIATE"},
     }
 }
 
@@ -161,7 +181,49 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATIC_ROOT = Path(
+    os.environ.get("FUINOISE_STATIC_ROOT", str(BASE_DIR / "staticfiles"))
+)
+
+if not DEBUG:
+    if (
+        len(SECRET_KEY) < 50
+        or len(set(SECRET_KEY)) < 5
+        or SECRET_KEY.startswith("django-insecure-")
+    ):
+        raise ImproperlyConfigured("Set a strong DJANGO_SECRET_KEY for production.")
+    try:
+        origin = urlsplit(FUINOISE_ORIGIN)
+        origin.port
+    except ValueError:
+        raise ImproperlyConfigured(
+            "Set FUINOISE_ORIGIN to the public HTTPS origin."
+        ) from None
+    if (
+        origin.scheme != "https"
+        or not origin.hostname
+        or origin.username
+        or origin.password
+        or origin.path
+        or origin.query
+        or origin.fragment
+    ):
+        raise ImproperlyConfigured("Set FUINOISE_ORIGIN to the public HTTPS origin.")
+    if (
+        not os.environ.get("DJANGO_ALLOWED_HOSTS")
+        or origin.hostname not in ALLOWED_HOSTS
+        or any(
+            host.startswith(".") or host == "*" or "/" in host for host in ALLOWED_HOSTS
+        )
+    ):
+        raise ImproperlyConfigured(
+            "Set explicit DJANGO_ALLOWED_HOSTS including the public hostname."
+        )
+    if not os.environ.get("FUINOISE_DATABASE_PATH") or not DATABASE_PATH.is_absolute():
+        raise ImproperlyConfigured("Set an absolute persistent FUINOISE_DATABASE_PATH.")
+    if not os.environ.get("FUINOISE_STATIC_ROOT") or not STATIC_ROOT.is_absolute():
+        raise ImproperlyConfigured("Set an absolute FUINOISE_STATIC_ROOT.")
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field

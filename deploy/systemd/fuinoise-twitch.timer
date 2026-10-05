@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh Fuinoise Twitch status every two minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+AccuracySec=5s
+Unit=fuinoise-twitch.service
+
+[Install]
+WantedBy=timers.target

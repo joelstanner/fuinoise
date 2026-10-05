@@ -24,8 +24,11 @@ Timeline and its API are implemented; see [workspace setup and usage](docs/organ
 Reviewed pasted-lineup import, stored Twitch profiles/live status, and visitor-local
 times are implemented; see [import and public information](docs/import-and-public-information.md).
 On-site notifications and queued Discord delivery are implemented; see
-[notification setup and operations](docs/notifications.md). Deployment/backup
-verification, live provider rehearsal, and the real pilot remain.
+[notification setup and operations](docs/notifications.md). Production settings,
+Gunicorn/Caddy/systemd configuration, backup/restore tools and local release
+rehearsal are implemented; see [deployment and recovery](docs/deployment.md).
+Actual hosting, off-site recovery, live provider rehearsal, and the
+[real pilot](docs/pilot-runbook.md) remain.
 
 ## Local setup
 

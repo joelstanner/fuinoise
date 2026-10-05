@@ -14,8 +14,10 @@ see [workspace documentation](docs/organizer-workspace.md) and
 [import and public information](docs/import-and-public-information.md).
 Assignments become confirmed to streamers on publication; draft edits send no
 confirmation. On-site notifications and the Discord outbox are implemented;
-see [notification operations](docs/notifications.md). Scheduled delivery and live
-Discord rehearsal still need production configuration.
+see [notification operations](docs/notifications.md). Production configuration,
+recurring job definitions, operating docs and separate-file backup restoration
+are implemented; see [deployment and recovery](docs/deployment.md). Actual hosting,
+off-site recovery and live provider delivery remain rehearsal requirements.
 
 - [x] Add flexible slot durations with a configurable one-hour default, overlap validation, and overnight handling. Migration leaves legacy durations unknown until reviewed.
 - [x] Add backend working schedule drafts, atomic explicit publication, configurable signup opening, and protection against publishing stale assignments after a cancellation.
@@ -28,7 +30,8 @@ Discord rehearsal still need production configuration.
 - [x] Show event and visitor-local times on public schedules; verify essential workflows on phones and desktop browsers, including expanded import review and public rendering without JavaScript.
 - [x] Add on-site notifications and Discord organizer-channel alerts plus private messages to affected streamers. Delivery claims, recorded receipts, bounded retries, and uncertain-outcome review protect against duplicates.
 - [ ] Configure the organizer Discord channel and recurring delivery worker, then verify real channel alerts, private messages, and recovery during the hosted rehearsal.
-- [ ] Configure and document public deployment, persistent data, upgrades, backups, and restoration.
+- [x] Prepare production settings, frontend collection, Gunicorn/Caddy and systemd configuration, persistent-data paths, operating docs, verified snapshots and separate-file restoration. Local rehearsal verifies startup/restart, secure application behavior, HTTPS/static proxy serving and all 31 restored tables; historical unsent Discord alerts are held.
+- [ ] Select the host/domain, deploy the tested revision, verify Linux services and public HTTPS, configure private off-site backups and complete an off-site recovery. Follow the [hosted rehearsal checklist](docs/pilot-runbook.md).
 - [ ] Complete a real pilot event and the release acceptance checks in the MVP definition.
 
 The completed sections below describe the existing foundation. They do not mark

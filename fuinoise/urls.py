@@ -15,11 +15,13 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
 
 from fuinoise_live import (
     account_views,
+    health,
     notification_views,
     organizer_api,
     request_views,
@@ -27,6 +29,7 @@ from fuinoise_live import (
 )
 
 urlpatterns = [
+    path("health/", health.health, name="health"),
     path("notifications/", notification_views.inbox, name="notification_inbox"),
     path(
         "notifications/<int:pk>/", notification_views.inbox, name="notification_detail"
@@ -170,5 +173,6 @@ urlpatterns = [
         name="eligibility_detail",
     ),
     path("admin/", admin.site.urls),
-    path("__debug__/", include("debug_toolbar.urls")),
 ]
+if settings.DEBUG:
+    urlpatterns.append(path("__debug__/", include("debug_toolbar.urls")))

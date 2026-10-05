@@ -22,7 +22,9 @@ React Timeline and Django REST Framework API are implemented; see
 information, and visitor-local times are implemented; see
 [import documentation](import-and-public-information.md). On-site notifications
 and queued Discord delivery are implemented; see [notification operations](notifications.md).
-Production worker configuration, hosted rehearsal, deployment, and the pilot remain.
+Production configuration and recurring job definitions are prepared; see
+[deployment and recovery](deployment.md). Hosted rehearsal, off-site recovery,
+deployment, and the pilot remain.
 
 Milestone 1 is implemented and verified with Django tests, including migration
 preservation, draft privacy, complete interval validation, stale writes, atomic
@@ -48,7 +50,13 @@ worker claims, persisted rate-limit cooldowns, and bounded safe retries. Lost
 message receipts are held for verification rather than blindly resent. Tests and
 browser checks cover privacy, publication changes, cancellation, retry, and phone
 layouts. Real Discord delivery and recurring worker setup remain hosted rehearsal
-requirements. Milestone 7, deployment and pilot, is next.
+requirements. Milestone 7 now includes secure production settings, Gunicorn/Caddy
+and systemd configuration, persistent-data paths, release checks, health monitoring,
+backup/verify/restore commands and operating documentation. Local rehearsal proves
+startup/restart, Caddy HTTPS/static serving with a temporary CA, and separate
+restoration of all 31 tables, with unsent historical Discord alerts held for review.
+The [hosted rehearsal and real pilot](pilot-runbook.md) remain required; milestone 7
+is not complete.
 
 ## Implementation sequence
 

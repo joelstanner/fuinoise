@@ -1,0 +1,19 @@
+[Unit]
+Description=Deliver queued Fuinoise Discord alerts
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=fuinoise
+Group=fuinoise
+WorkingDirectory=/srv/fuinoise/current
+EnvironmentFile=/etc/fuinoise/fuinoise.env
+ExecStart=/usr/bin/env venv/bin/python manage.py deliver_notifications --limit 25
+TimeoutStartSec=900
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/fuinoise/data

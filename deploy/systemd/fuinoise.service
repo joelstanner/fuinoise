@@ -1,0 +1,23 @@
+[Unit]
+Description=Fuinoise web application
+After=network.target
+
+[Service]
+Type=simple
+User=fuinoise
+Group=fuinoise
+WorkingDirectory=/srv/fuinoise/current
+EnvironmentFile=/etc/fuinoise/fuinoise.env
+ExecStart=/usr/bin/env venv/bin/python -m gunicorn -c deploy/gunicorn.conf.py fuinoise.wsgi:application
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=180
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/fuinoise/data
+
+[Install]
+WantedBy=multi-user.target

@@ -10,7 +10,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m pip install -r requirements-dev.txt -r requirements-prod.txt
       - run: black --check .
       - run: ruff check .
       - run: mypy fuinoise fuinoise_live
@@ -28,6 +28,8 @@ jobs:
         working-directory: frontend
       - run: npm run build
         working-directory: frontend
+      - run: python scripts/verify_deployment.py
+      - run: systemd-analyze verify deploy/systemd/*.service deploy/systemd/*.timer
       - run: npx playwright install --with-deps chromium
         working-directory: frontend
       - run: npm run test:browser

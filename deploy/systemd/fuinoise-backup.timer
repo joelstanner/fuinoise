@@ -1,0 +1,11 @@
+[Unit]
+Description=Back up Fuinoise daily
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 UTC
+Persistent=true
+RandomizedDelaySec=5min
+Unit=fuinoise-backup.service
+
+[Install]
+WantedBy=timers.target

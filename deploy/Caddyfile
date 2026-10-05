@@ -1,0 +1,33 @@
+{
+	# Drop sensitive HTTP fields from diagnostic logs, including OAuth queries.
+	log default {
+		format filter {
+			wrap json
+			fields {
+				request>uri delete
+				request>headers delete
+			}
+		}
+	}
+}
+
+# Replace with the same hostname as FUINOISE_ORIGIN and DJANGO_ALLOWED_HOSTS.
+fuinoise.example {
+	encode zstd gzip
+	request_body {
+		max_size 1MB
+	}
+	handle_path /static/* {
+		root * /srv/fuinoise/current/staticfiles
+		header Cache-Control "no-cache"
+		file_server
+	}
+	handle {
+		reverse_proxy 127.0.0.1:8001 {
+			header_up -Forwarded
+			header_up -X-Forwarded-Host
+			header_up -X-Forwarded-SSL
+			header_up -X-Forwarded-Protocol
+		}
+	}
+}
