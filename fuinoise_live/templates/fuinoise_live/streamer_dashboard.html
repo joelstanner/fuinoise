@@ -1,0 +1,33 @@
+<section class="account-panel" aria-labelledby="performances-title">
+  <h2 id="performances-title">Confirmed performances</h2>
+  <p>Assignments appear here after publication. Contact an organizer for changes other than cancellation.</p>
+  <ul class="dashboard-list">
+    {% for slot in confirmed_assignments %}
+      <li><h3><a href="{% url 'event_detail' slot.event_id %}">{{ slot.event.name }}</a></h3><p>{{ slot.display_time }}</p>
+        <details><summary>Cancel this performance</summary><p>This immediately reopens your published slot. It does not withdraw your request or cancel your other performances.</p>
+          <form method="post" action="{% url 'cancel_performance' slot.pk %}">{% csrf_token %}<input type="hidden" name="version" value="{{ slot.event.schedule_version }}"><button type="submit">Cancel and reopen slot</button></form>
+        </details>
+      </li>
+    {% empty %}<li>No upcoming confirmed performances.</li>{% endfor %}
+  </ul>
+</section>
+<section class="account-panel" aria-labelledby="requests-title">
+  <h2 id="requests-title">Your requests</h2>
+  <ul class="dashboard-list">
+    {% for request in slot_requests %}
+      <li><h3>{% if request.event_available %}{{ request.event.name }}{% else %}Event currently unavailable{% endif %}</h3><p>{{ request.get_status_display }}</p>
+        {% if request.notes %}<p>Your notes: {{ request.notes }}</p>{% endif %}
+        <ul>{% for preference in request.preference_rows %}<li>{{ preference.label }}{% if preference.changed %} · Schedule changed or slot removed{% endif %}</li>{% endfor %}</ul>
+        {% if request.event_available %}<p><a class="text-link" href="{% url 'event_signup' request.event_id %}">Update or resubmit preferences →</a></p>{% endif %}
+        {% if request.status == 'submitted' %}
+          <details><summary>Withdraw this request</summary><p>Confirmed performances stay assigned. Cancel those separately if needed.</p><form method="post" action="{% url 'withdraw_request' request.pk %}">{% csrf_token %}<input type="hidden" name="version" value="{{ request.version }}"><button type="submit">Withdraw request</button></form></details>
+        {% endif %}
+      </li>
+    {% empty %}<li>You have not submitted any preferences yet.</li>{% endfor %}
+  </ul>
+</section>
+<section class="account-panel" aria-labelledby="signup-title">
+  <h2 id="signup-title">Events accepting preferences</h2>
+  <ul class="dashboard-list">{% for event in signup_events %}<li><h3>{{ event.name }}</h3><p>{{ event.date }} · {{ event.event_time_zone }}</p><a class="text-link" href="{% url 'event_signup' event.pk %}">Choose preferred slots →</a></li>{% empty %}<li>No events currently have future slots available to you.</li>{% endfor %}</ul>
+</section>
+{% if past_assignments %}<section class="account-panel" aria-labelledby="past-title"><h2 id="past-title">Past performances</h2><ul class="dashboard-list">{% for slot in past_assignments %}<li><a class="text-link" href="{% url 'event_detail' slot.event_id %}">{{ slot.event.name }}</a><p>{{ slot.display_time }}</p></li>{% endfor %}</ul></section>{% endif %}

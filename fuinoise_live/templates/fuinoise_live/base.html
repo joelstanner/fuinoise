@@ -15,10 +15,14 @@
         <a href="{% url 'current_events' %}">Current</a>
         <a href="{% url 'upcoming_events' %}">Upcoming</a>
         <a href="{% url 'historical_events' %}">History</a>
+        <a href="{% url 'account_home' %}">{% if user.is_authenticated %}Your account{% else %}Sign in{% endif %}</a>
       </nav>
     </div>
   </header>
-  <main class="shell">{% block content %}{% endblock %}</main>
+  <main class="shell">
+    {% if messages %}<div class="messages" role="status">{% for message in messages %}<p>{{ message }}</p>{% endfor %}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
   <footer class="site-footer shell">Live music, connected by raids.</footer>
 </body>
 </html>

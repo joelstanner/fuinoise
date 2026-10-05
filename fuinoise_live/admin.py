@@ -1,13 +1,13 @@
 import json
 import re
-from datetime import datetime, timedelta
-from datetime import timezone as datetime_timezone
+from datetime import timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
 from django import forms
 from django.contrib import admin
 from django.db import transaction
+from django.db.models import F
 from django.forms.models import BaseInlineFormSet
 from django.utils import timezone
 
@@ -21,6 +21,7 @@ from .models import (
     Streamer,
     WeeklyAvailability,
 )
+from .scheduling import event_local_start, validate_intervals
 
 
 class EventLocalTimeField(forms.TimeField):
@@ -36,6 +37,12 @@ class EventLocalTimeField(forms.TimeField):
 
 
 class RaidSlotInlineForm(forms.ModelForm):
+    duration_minutes = forms.IntegerField(
+        label="Planned minutes",
+        min_value=1,
+        required=False,
+        help_text="New slots use the event default. Review older slots explicitly.",
+    )
     start_date = forms.DateField(
         label="Date",
         required=False,
@@ -79,9 +86,13 @@ class RaidSlotInlineForm(forms.ModelForm):
             self.initial["start_time"] = local_start.strftime(time_format)
         elif self.event and self.event.date:
             self.initial["start_date"] = self.event.date
+            self.initial["duration_minutes"] = self.event.default_slot_duration_minutes
 
     def has_changed(self) -> bool:
-        if not self.instance.pk and self.changed_data == ["start_date"]:
+        if not self.instance.pk and not set(self.changed_data) - {
+            "start_date",
+            "duration_minutes",
+        }:
             return False
         return bool(super().has_changed())
 
@@ -89,6 +100,12 @@ class RaidSlotInlineForm(forms.ModelForm):
         cleaned_data = super().clean()
         if self.cleaned_data.get("DELETE"):
             return cleaned_data
+        if cleaned_data.get("duration_minutes") is None:
+            cleaned_data["duration_minutes"] = (
+                self.instance.duration_minutes
+                if self.instance.pk
+                else self.event.default_slot_duration_minutes if self.event else 60
+            )
         start_date = cleaned_data.get("start_date") or (
             self.event.date if self.event else None
         )
@@ -97,25 +114,12 @@ class RaidSlotInlineForm(forms.ModelForm):
             self.add_error("start_time", "Enter a start time.")
         if not start_date or not start_time or not self.event:
             return cleaned_data
-        zone = ZoneInfo(self.event.event_time_zone)
-        wall_time = datetime.combine(start_date, start_time)
-        local_start = wall_time.replace(tzinfo=zone)
-        if (
-            local_start.astimezone(datetime_timezone.utc)
-            .astimezone(zone)
-            .replace(tzinfo=None)
-            != wall_time
-        ):
-            self.add_error(
-                "start_time", "This time does not exist in the event time zone."
+        try:
+            local_start = event_local_start(
+                start_date, start_time, self.event.event_time_zone
             )
-        elif (
-            local_start.utcoffset()
-            != wall_time.replace(tzinfo=zone, fold=1).utcoffset()
-        ):
-            self.add_error(
-                "start_time", "This time is ambiguous in the event time zone."
-            )
+        except forms.ValidationError as error:
+            self.add_error("start_time", error)
         else:
             self.instance.start = local_start
             cleaned_data["start"] = local_start
@@ -125,6 +129,18 @@ class RaidSlotInlineForm(forms.ModelForm):
         # Swaps are checked against the final formset state and saved atomically.
         pass
 
+    def save(self, commit: bool = True) -> Any:
+        slot = super().save(commit=False)
+        if (
+            slot.signup_request_id
+            and slot.signup_request.streamer_id != slot.streamer_id
+        ):
+            slot.signup_request = None
+        if commit:
+            slot.save()
+            self.save_m2m()
+        return slot
+
 
 class RaidSlotInlineFormSet(BaseInlineFormSet):
     def get_form_kwargs(self, index: int | None) -> dict[str, Any]:
@@ -132,6 +148,7 @@ class RaidSlotInlineFormSet(BaseInlineFormSet):
 
     def clean(self) -> None:
         starts = set()
+        intervals = []
         for form in self.forms:
             if not form.cleaned_data or form.cleaned_data.get("DELETE"):
                 continue
@@ -143,7 +160,10 @@ class RaidSlotInlineFormSet(BaseInlineFormSet):
                     "Each lineup slot needs a different start time."
                 )
             starts.add(start)
+            intervals.append((start, form.cleaned_data.get("duration_minutes")))
         super().clean()
+        if not any(self.errors):
+            validate_intervals(intervals)
 
     def save(self, commit: bool = True) -> Any:
         if not commit:
@@ -200,6 +220,7 @@ class RaidSlotInline(admin.TabularInline):
         "streamer",
         "start_date",
         "start_time",
+        "duration_minutes",
         "raid_slot_note",
         "replay_url",
     )
@@ -207,6 +228,8 @@ class RaidSlotInline(admin.TabularInline):
 
 
 class EventAdminForm(forms.ModelForm):
+    default_slot_duration_minutes = forms.IntegerField(min_value=1, required=False)
+
     class Meta:
         model = Event
         fields = "__all__"
@@ -232,6 +255,10 @@ class EventAdminForm(forms.ModelForm):
 
     def clean(self) -> Any:
         cleaned_data = super().clean()
+        if cleaned_data.get("default_slot_duration_minutes") is None:
+            cleaned_data["default_slot_duration_minutes"] = (
+                self.instance.default_slot_duration_minutes
+            )
         if not self.instance.pk and not cleaned_data.get("event_time_zone"):
             community = cleaned_data.get("community")
             if community:
@@ -258,6 +285,14 @@ class EventAdmin(admin.ModelAdmin):
         "description",
         "raidslot__streamer__display_name",
     )
+
+    def save_related(
+        self, request: Any, form: Any, formsets: Any, change: bool
+    ) -> None:
+        super().save_related(request, form, formsets, change)
+        Event.objects.filter(pk=form.instance.pk).update(
+            schedule_version=F("schedule_version") + 1
+        )
 
     @admin.display(description="Slots")
     def slot_count(self, event: Event) -> int:

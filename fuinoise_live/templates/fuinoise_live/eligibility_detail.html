@@ -1,0 +1,20 @@
+{% extends "fuinoise_live/base.html" %}
+{% block title %}Review {{ account.streamer.display_name }}{% endblock %}
+{% block content %}
+  <a class="back-link" href="{% url 'eligibility_list' %}">← Participation reviews</a>
+  <div class="page-intro review-intro"><p class="eyebrow">Organizer review</p><h1>{{ account.streamer.display_name }}</h1><p>{{ account.streamer.twitch_username }} · Twitch ID {{ account.streamer.twitch_id }}</p></div>
+  <section class="account-panel">
+    <h2>Current status</h2>
+    <p>{{ account.get_participation_status_display }} · {% if eligible %}Eligible to request{% else %}Requirements incomplete{% endif %}</p>
+    <p>Discord: {% if account.discord_id %}{{ account.discord_username }} ({{ account.discord_id }}){% else %}Not connected{% endif %}</p>
+    <p>{% if membership_current %}Server membership verified.{% else %}Current server membership is not verified.{% endif %}{% if account.discord_checked_at %} Last check: {{ account.discord_checked_at }}.{% endif %}</p>
+    {% if perms.fuinoise_live.review_eligibility %}
+      <form method="post" class="review-form">{% csrf_token %}<input type="hidden" name="action" value="participation"><h2>Participation decision</h2><p>Confirm active participation in Fuinoise Discord before approving. Discord exceptions are recorded separately below.</p>{{ participation_form.as_p }}<button type="submit">Save participation review</button></form>
+    {% endif %}
+    {% if perms.fuinoise_live.override_discord_requirement %}
+      <form method="post" class="review-form">{% csrf_token %}<input type="hidden" name="action" value="override"><h2>Discord requirement</h2><p>An override allows participation without Discord verification. Organizer participation approval is still required.</p>{{ override_form.as_p }}<button type="submit">Save Discord requirement</button></form>
+    {% endif %}
+    <h2>Review history</h2>
+    <ul class="review-history">{% for review in reviews %}<li><strong>{{ review.action_label }}</strong> · {{ review.created_at }} · {{ review.actor_label }}<br>Participation: {{ review.participation_status }} · Discord override: {{ review.discord_override|yesno:"Yes,No" }}{% if review.reason %}<p>{{ review.reason }}</p>{% endif %}</li>{% empty %}<li>No reviews recorded.</li>{% endfor %}</ul>
+  </section>
+{% endblock %}

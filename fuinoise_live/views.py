@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -21,7 +21,7 @@ def published_events() -> QuerySet[Event]:
 
 
 def prepare_event(event: Any, now: datetime) -> Any:
-    """Classify by local calendar days, extending through the final slot day."""
+    """Keep an event current through the final occupied local calendar day."""
     zone = ZoneInfo(event.event_time_zone)
     today = timezone.localtime(now, zone).date()
     last_day = event.date
@@ -35,7 +35,15 @@ def prepare_event(event: Any, now: datetime) -> Any:
             slot.local_start, "D g:i A", use_l10n=False
         )
         slot.local_start_iso = slot.local_start.isoformat()
-        last_day = max(last_day, slot.local_start.date())
+        occupied_until = slot.start
+        if slot.end is not None:
+            slot.local_end = timezone.localtime(slot.end, zone)
+            slot.local_end_iso = slot.local_end.isoformat()
+            slot.local_end_display = formats.date_format(
+                slot.local_end, "D, M j · g:i A T", use_l10n=False
+            )
+            occupied_until = slot.end - timedelta(microseconds=1)
+        last_day = max(last_day, timezone.localtime(occupied_until, zone).date())
     if today < event.date:
         event.public_period = "upcoming"
     elif today <= last_day:

@@ -1,6 +1,32 @@
 # Fuinoise TODO
 
-Keep `Event`, `Streamer`, and `RaidSlot`, their existing data, and the current migrations. Django Admin remains the organizer interface. Build public pages from these records rather than introducing a separate schedule store.
+The agreed release target and architecture are in [the MVP definition](docs/mvp-definition.md). Keep `Event`, `Streamer`, and `RaidSlot`, their existing data, and the current migrations; extend them as needed for the agreed workflows. Build public pages from these records. React powers the custom organizer Timeline workspace through a Django REST Framework API; public and streamer pages use Django templates. Django Admin remains available for maintenance.
+
+## Remaining MVP work
+
+Follow [the implementation plan](docs/mvp-implementation-plan.md) for milestone
+order and acceptance checks. The scheduling backend milestone is complete;
+accounts and eligibility are implemented, with live provider rehearsal pending
+configuration. Streamer requests, dashboards, cancellation, and backend organizer
+assignment operations are implemented. The React Timeline and its API are next.
+Assignments become confirmed to streamers on publication; draft edits send no
+confirmation. Notification delivery is still to be built.
+
+- [x] Add flexible slot durations with a configurable one-hour default, overlap validation, and overnight handling. Migration leaves legacy durations unknown until reviewed.
+- [x] Add backend working schedule drafts, atomic explicit publication, configurable signup opening, and protection against publishing stale assignments after a cancellation.
+- [x] Implement Twitch sign-in, Discord account linking and server membership checks, organizer eligibility approval, and Discord requirement overrides. Setup and live-rehearsal steps are in [account documentation](docs/accounts-and-eligibility.md).
+- [ ] Configure Twitch and Discord credentials and the Fuinoise server, then complete live sign-in, linking, membership, and review verification on HTTPS.
+- [x] Add multiple-slot preferences, backend organizer assignment of multiple performances, streamer dashboards, and account-linked direct cancellation that reopens slots. The organizer browser controls arrive with the Timeline milestone; see [workflow documentation](docs/requests-and-assignments.md).
+- [ ] Build the React Timeline workspace and Django REST Framework endpoints: drag requests into slots, drag performances through time, show conflicts, edit details, and autosave valid drafts.
+- [ ] Add pasted-lineup import with review of parsed times and streamer matches. Keep empty time labels as open slots and require correction of ambiguous input.
+- [ ] Pull streamer information from Twitch and show live/offline status through a bounded service layer with failure handling. Keep local schedules readable during an outage.
+- [ ] Show event and visitor-local times on public schedules; verify essential workflows on phones and desktop browsers.
+- [ ] Add on-site notifications and Discord organizer-channel alerts plus private messages to affected streamers.
+- [ ] Configure and document public deployment, persistent data, upgrades, backups, and restoration.
+- [ ] Complete a real pilot event and the release acceptance checks in the MVP definition.
+
+The completed sections below describe the existing foundation. They do not mark
+the expanded MVP as finished.
 
 ## Completed: Fuinoise musician and raid data
 
@@ -24,30 +50,30 @@ Keep `Event`, `Streamer`, and `RaidSlot`, their existing data, and the current m
 ## 3. Publish event pages — completed
 
 - Added Draft, Published, and Private event states. Existing events become drafts; only Published events are returned by public queries and detail routes.
-- Current, upcoming, and historical pages use each event's local calendar date. An event becomes current at local midnight on its date and remains current through the local calendar day of its latest slot start. It moves to history at the next local midnight. This follows daylight saving changes in the event's zone.
+- Current, upcoming, and historical pages use each event's local calendar date. An event becomes current at local midnight on its date and remains current through the final occupied local calendar day of its planned slots. A slot ending exactly at midnight does not extend into the next day. Legacy slots with unknown duration retain classification by their start day. This follows daylight saving changes in the event's zone.
 - Added public listings and details from ordered raid slots, with community branding and event-local lineup times. Tests cover publication, empty pages, route access, ordering, time-zone boundaries, and overnight slots.
 - A train's scheduled time slots can remain open. In Admin, organizers assign or move streamers by editing the streamer on each time slot; the slot's time stays fixed. Public listings and details show both assigned streamers and open slots, so a simple hour-by-hour train remains readable while it is being filled.
 
-## 4. Isolate Twitch integration
+## Twitch integration requirements
 
 - Put Twitch API calls behind a service layer with bounded timeouts and clear failure handling. Keep credentials in deployment configuration.
-- Make public pages render from local records when Twitch is unavailable; treat live Twitch data as optional enrichment. Test unavailable and malformed responses.
+- Add Twitch sign-in, Twitch-sourced streamer information, and live/offline status for the MVP. Make public schedules render from local records when Twitch is unavailable; represent unavailable status clearly. Test unavailable and malformed responses.
 
-## 5. Document operation
+## Operation requirements
 
 - Update the README with Python 3.13 local setup, required configuration, migrations, Admin usage, and test commands.
 - Document self-hosted deployment: secrets, database, static files, application server, reverse proxy, backups, and upgrade steps.
 
-## Ideas
+## Implementation references and later ideas
 
-### Create an event from a pasted lineup
+### Pasted lineup import reference
 
-- Add an organizer text field that accepts a pasted schedule such as `*07.09.2026* Pre-Pary: P_chops 10a: 11a: ActuallySparky 12p: 1p: 2p: RottingCircuits 3p: Karmalizing 4p: Vjpcat 5p: 6p: 7p: JaniceRoberta 8p: 9p: Mroovki 10p:`.
+- Pasted-lineup import is now required for the MVP. An example input is `*07.09.2026* Pre-Pary: P_chops 10a: 11a: ActuallySparky 12p: 1p: 2p: RottingCircuits 3p: Karmalizing 4p: Vjpcat 5p: 6p: 7p: JaniceRoberta 8p: 9p: Mroovki 10p:`.
 - Parse the event date, title, time labels, and streamer names; pre-populate the event and slots in the community’s time zone. Keep empty time labels as open slots and let the organizer review ambiguous text and streamer matches before saving.
 
-### Refactor Admin and public front ends
+### Organizer and public front ends
 
-- Plan a substantial redesign of the organizer Admin workflow and public pages as the product grows.
+- The custom React Timeline workspace is required for the MVP. Public and streamer pages use Django templates. Further public-page redesigns can follow the pilot.
 
 ### Archive old events
 
@@ -55,7 +81,12 @@ Keep `Event`, `Streamer`, and `RaidSlot`, their existing data, and the current m
 
 ### REST API
 
-- Likely use FastAPI for future REST API endpoints; decide the API boundary and how it will share the existing Django models and data before implementation.
+- Django REST Framework endpoints for the organizer workspace are required for the MVP. The earlier tentative FastAPI direction is superseded. Additional public API consumers are later work.
+
+### Embedded viewing and other deferred features
+
+- Embedded Twitch viewing with automatic following of actual raid handoffs is a stretch goal. Behavior for raids outside the event lineup remains undecided.
+- Dedicated public streamer profile pages, email notifications, and independently administered communities are later work.
 
 ### Automated handoff orchestrator (TwitchIO + Celery)
 

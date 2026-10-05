@@ -3,17 +3,62 @@ from zoneinfo import ZoneInfo
 
 from django.contrib import admin
 from django.contrib.auth import get_user_model
+from django.forms.models import inlineformset_factory
 from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from fuinoise_live.admin import RaidSlotInlineForm
+from fuinoise_live.admin import RaidSlotInlineForm, RaidSlotInlineFormSet
 from fuinoise_live.models import Community, Event, RaidSlot, Streamer
 
 from .helpers import create_event
 
 
 class EventAdminTests(TestCase):
+    def test_duration_conflicts_include_unchanged_slots_and_reject_invalid_lengths(
+        self,
+    ):
+        event = create_event(date=datetime.date(2026, 10, 4), event_time_zone="UTC")
+        slots = [
+            RaidSlot.objects.create(
+                event=event,
+                start=datetime.datetime(
+                    2026, 10, 4, hour, tzinfo=datetime.timezone.utc
+                ),
+            )
+            for hour in (20, 21)
+        ]
+        FormSet = inlineformset_factory(
+            Event,
+            RaidSlot,
+            form=RaidSlotInlineForm,
+            formset=RaidSlotInlineFormSet,
+            fields=("streamer", "duration_minutes", "raid_slot_note", "replay_url"),
+            extra=0,
+        )
+        data = {
+            "raidslot_set-TOTAL_FORMS": "2",
+            "raidslot_set-INITIAL_FORMS": "2",
+            **{
+                f"raidslot_set-{index}-{field}": value
+                for index, slot in enumerate(slots)
+                for field, value in {
+                    "id": slot.pk,
+                    "event": event.pk,
+                    "start_date": "2026-10-04",
+                    "start_time": f"{20 + index}:00",
+                    "duration_minutes": 90 if index == 0 else 60,
+                }.items()
+            },
+        }
+        formset = FormSet(data, instance=event)
+        self.assertFalse(formset.is_valid())
+        self.assertIn("overlap", str(formset.non_form_errors()))
+        data["raidslot_set-0-duration_minutes"] = 60
+        self.assertTrue(FormSet(data, instance=event).is_valid())
+        data["raidslot_set-0-duration_minutes"] = 0
+        self.assertFalse(FormSet(data, instance=event).is_valid())
+
     def test_event_change_page_renders(self):
         user = get_user_model().objects.create_superuser(
             username="admin", email="admin@example.com", password="test-password"

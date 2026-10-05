@@ -1,0 +1,10 @@
+{% extends "fuinoise_live/base.html" %}
+{% block title %}Participation reviews{% endblock %}
+{% block content %}
+  <div class="page-intro"><p class="eyebrow">Organizer</p><h1>Participation reviews</h1><p>Review participation and manage Discord exceptions.</p></div>
+  <ul class="slot-list review-list">
+    {% for account in accounts %}
+      <li class="slot"><div class="slot-main"><h2><a href="{% url 'eligibility_detail' account.pk %}">{{ account.streamer.display_name }}</a></h2><p>{{ account.get_participation_status_display }}{% if account.discord_override %} · Discord override{% endif %}</p></div><a class="text-link" href="{% url 'eligibility_detail' account.pk %}">Review →</a></li>
+    {% empty %}<li class="empty-state">Streamers appear here after their first Twitch sign-in.</li>{% endfor %}
+  </ul>
+{% endblock %}

@@ -49,4 +49,31 @@ h1{font-size:clamp(2.7rem,7vw,5.2rem);line-height:1.03;letter-spacing:-.065em;ma
 .slot-main p{color:#c7c3d2;margin-bottom:0;line-height:1.5}
 .slot-note{margin-top:10px}
 .site-footer{border-top:1px solid #ffffff1d;padding:30px 0 42px;color:#928da4;font-size:.84rem}
+.account-panel{border:1px solid #ffffff20;border-radius:20px;background:#ffffff0b;padding:28px;margin-bottom:60px;max-width:780px}
+.account-panel p{line-height:1.6;color:#c7c3d2}
+.account-panel h3{margin-top:28px}
+.account-panel button{border:1px solid #f3a2c6;border-radius:8px;background:#392638;color:#fff;padding:12px 18px;font:inherit;cursor:pointer}
+.account-panel button:hover{background:#57334c}
+.account-panel a:focus-visible,.account-panel button:focus-visible,.account-panel input:focus-visible,.account-panel select:focus-visible,.account-panel textarea:focus-visible{outline:3px solid #f3a2c6;outline-offset:3px}
+.account-actions{display:flex;flex-wrap:wrap;gap:12px}
+.account-disconnect,.account-signout{margin:28px 0}
+.account-disconnect summary{cursor:pointer}
+.account-status,.messages{border-left:3px solid #f3a2c6;padding:12px 18px;background:#ffffff08}
+.messages{margin-top:24px}.messages p{margin:0;line-height:1.6}
+.review-intro{padding-top:0}
+.review-form{border-top:1px solid #ffffff20;padding-top:24px;margin:28px 0}
+.review-form label{display:block;margin-bottom:8px}
+.review-form input:not([type=checkbox]),.review-form select,.review-form textarea{width:100%;max-width:100%;border:1px solid #ffffff40;border-radius:6px;background:#11131d;color:#fff;font:inherit;padding:10px}
+.review-form .errorlist{color:#f3a2c6}
+.review-history{padding-left:22px}.review-history li{margin-bottom:20px;line-height:1.6}
+.review-list{margin-bottom:60px}
+.account-panel,.review-intro,.review-list{overflow-wrap:anywhere}
+.dashboard-list{list-style:none;padding:0;margin:0}
+.dashboard-list>li{padding:20px 0;border-top:1px solid #ffffff20;line-height:1.6}
+.dashboard-list h3{margin-top:0;margin-bottom:8px}
+.dashboard-list details{margin:16px 0}.dashboard-list summary{cursor:pointer}
+.signup-form fieldset{border:1px solid #ffffff30;border-radius:10px;padding:18px;margin-bottom:24px;min-width:0}
+.signup-form fieldset label{display:flex;gap:12px;align-items:flex-start;margin:14px 0;line-height:1.5}
+.signup-form fieldset input[type=checkbox]{flex:none;margin-top:5px}
+.signup-form button:disabled{opacity:.5;cursor:not-allowed}
 @media(max-width:680px){.header-inner{align-items:flex-start;flex-direction:column;padding:17px 0}nav{gap:18px}.page-intro{padding-top:52px}.detail-hero{grid-template-columns:1fr;gap:16px}.slot{gap:12px;flex-wrap:wrap}.slot>.text-link{margin-left:44px}}

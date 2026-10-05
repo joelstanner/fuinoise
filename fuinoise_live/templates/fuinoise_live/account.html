@@ -1,0 +1,42 @@
+{% extends "fuinoise_live/base.html" %}
+{% block title %}Your account{% endblock %}
+{% block content %}
+  <div class="page-intro">
+    <p class="eyebrow">Join the train</p>
+    <h1>Your account</h1>
+    <p>Connect your accounts and check your participation status.</p>
+  </div>
+  <section class="account-panel" aria-labelledby="account-title">
+    {% if account %}
+      <h2 id="account-title">{{ account.streamer.display_name }}</h2>
+      <p>Twitch: {{ account.streamer.twitch_display_name }} ({{ account.streamer.twitch_username }})</p>
+      <p>Participation: <strong>{{ account.get_participation_status_display }}</strong></p>
+      {% if eligible %}<p class="account-status">You meet the requirements to request slots.</p>{% else %}<p class="account-status">Participation requires organizer approval and a verified connection to the Fuinoise Discord server, unless an organizer overrides the Discord requirement.</p>{% endif %}
+      {% if account.discord_override %}<p>An organizer has overridden your Discord requirement.</p>{% endif %}
+      {% if account.discord_id %}
+        <h3>Discord: {{ account.discord_username }}</h3>
+        {% if membership_current %}<p>Fuinoise server membership verified.</p>{% elif account.discord_member == False %}<p>Fuinoise server membership has not been confirmed. Join the server and complete its membership screening, then check again.</p>{% else %}<p>Discord membership needs verification. Check again or reconnect Discord.</p>{% endif %}
+        <div class="account-actions">
+          <form method="post" action="{% url 'discord_refresh' %}">{% csrf_token %}<button type="submit">Check membership</button></form>
+          <form method="post" action="{% url 'discord_connect' %}">{% csrf_token %}<button type="submit">Reconnect Discord</button></form>
+        </div>
+        <details class="account-disconnect"><summary>Disconnect Discord</summary>
+          <p>Disconnecting resets organizer approval and any Discord override. You will need a new review before requesting slots.</p>
+          <form method="post" action="{% url 'discord_disconnect' %}">{% csrf_token %}<input type="hidden" name="version" value="{{ account.version }}"><button type="submit">Disconnect and reset review</button></form>
+        </details>
+      {% else %}
+        <form method="post" action="{% url 'discord_connect' %}">{% csrf_token %}<button type="submit">Connect Discord</button></form>
+      {% endif %}
+    {% elif user.is_authenticated %}
+      <h2 id="account-title">Twitch sign-in is required for participation</h2>
+      <p>Sign out of your current account, then sign in with Twitch to connect a streamer identity.</p>
+    {% else %}
+      <h2 id="account-title">Sign in with Twitch</h2>
+      <p>Use the Twitch account you will stream from. Organizer approval is required before requesting slots.</p>
+      <form method="post" action="{% url 'twitch_login' %}">{% csrf_token %}<button type="submit">Sign in with Twitch</button></form>
+    {% endif %}
+    {% if can_review %}<p><a class="text-link" href="{% url 'eligibility_list' %}">Review streamer eligibility →</a></p>{% endif %}
+    {% if user.is_authenticated %}<form method="post" action="{% url 'account_logout' %}" class="account-signout">{% csrf_token %}<button type="submit">Sign out</button></form>{% endif %}
+  </section>
+  {% if account %}{% include "fuinoise_live/streamer_dashboard.html" %}{% endif %}
+{% endblock %}
