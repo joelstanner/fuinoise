@@ -1,0 +1,1 @@
+<span class="twitch-status {{ slot.twitch.status }}"{% if slot.twitch.status != 'unknown' %} data-live-expires-ms="{{ slot.twitch.expires_in_ms }}"{% endif %}>{% if slot.twitch.status == 'live' %}Live on Twitch{% elif slot.twitch.status == 'offline' %}Offline on Twitch{% else %}Live status unavailable{% endif %}</span>

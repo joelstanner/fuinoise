@@ -8,9 +8,10 @@ Follow [the implementation plan](docs/mvp-implementation-plan.md) for milestone
 order and acceptance checks. The scheduling backend milestone is complete;
 accounts and eligibility are implemented, with live provider rehearsal pending
 configuration. Streamer requests, dashboards, cancellation, and backend organizer
-assignment operations, the React Timeline, and its API are implemented. Pasted
-import, Twitch information, and public visitor-local times are next; see
-[workspace documentation](docs/organizer-workspace.md).
+assignment operations, the React Timeline, and its API are implemented. Reviewed
+pasted import, Twitch information, and public visitor-local times are implemented;
+see [workspace documentation](docs/organizer-workspace.md) and
+[import and public information](docs/import-and-public-information.md).
 Assignments become confirmed to streamers on publication; draft edits send no
 confirmation. Notification delivery is still to be built.
 
@@ -20,9 +21,9 @@ confirmation. Notification delivery is still to be built.
 - [ ] Configure Twitch and Discord credentials and the Fuinoise server, then complete live sign-in, linking, membership, and review verification on HTTPS.
 - [x] Add multiple-slot preferences, organizer assignment of multiple performances, streamer dashboards, and account-linked direct cancellation that reopens slots. See [workflow documentation](docs/requests-and-assignments.md).
 - [x] Build the React Timeline workspace and Django REST Framework endpoints: event editing, drag assignment and performance movement, conflicts, detail controls, private autosaves, publication, reviewed early signup, and explicit stale-draft recovery. Browser checks cover save failures, keyboard controls, and phone layouts.
-- [ ] Add pasted-lineup import with review of parsed times and streamer matches. Keep empty time labels as open slots and require correction of ambiguous input.
-- [ ] Pull streamer information from Twitch and show live/offline status through a bounded service layer with failure handling. Keep local schedules readable during an outage.
-- [ ] Show event and visitor-local times on public schedules; verify essential workflows on phones and desktop browsers.
+- [x] Add pasted-lineup import with review of parsed times and streamer matches. Keep empty time labels as open slots and require correction of ambiguous input. Imports save atomically to private drafts.
+- [x] Pull streamer information from Twitch and show live/offline status through a bounded service layer with failure handling. Keep local schedules readable during an outage; expired or failed checks show unavailable status.
+- [x] Show event and visitor-local times on public schedules; verify essential workflows on phones and desktop browsers, including expanded import review and public rendering without JavaScript.
 - [ ] Add on-site notifications and Discord organizer-channel alerts plus private messages to affected streamers.
 - [ ] Configure and document public deployment, persistent data, upgrades, backups, and restoration.
 - [ ] Complete a real pilot event and the release acceptance checks in the MVP definition.

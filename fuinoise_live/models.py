@@ -108,6 +108,27 @@ class Streamer(models.Model):
         return str(self.display_name)
 
 
+class TwitchSnapshot(models.Model):
+    """Public Twitch enrichment, independent of verified account ownership."""
+
+    streamer = models.OneToOneField(
+        Streamer, on_delete=models.CASCADE, related_name="twitch_snapshot"
+    )
+    user_id = models.CharField(max_length=32)
+    login = models.CharField(max_length=25)
+    display_name = models.CharField(max_length=80)
+    description = models.TextField(blank=True, default="")
+    profile_image_url = models.URLField(max_length=500, blank=True, default="")
+    profile_checked_at = models.DateTimeField(null=True, blank=True)
+    is_live = models.BooleanField(null=True, blank=True)
+    status_checked_at = models.DateTimeField(null=True, blank=True)
+    stream_title = models.CharField(max_length=500, blank=True, default="")
+    game_name = models.CharField(max_length=200, blank=True, default="")
+    stream_started_at = models.DateTimeField(null=True, blank=True)
+    last_attempt_at = models.DateTimeField(null=True, blank=True)
+    refresh_error = models.CharField(max_length=255, blank=True, default="")
+
+
 class StreamerAccount(models.Model):
     class ParticipationStatus(models.TextChoices):
         PENDING = "pending", "Awaiting organizer review"

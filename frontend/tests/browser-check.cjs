@@ -76,7 +76,9 @@ let server, browser;
   page.setDefaultTimeout(9000);
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  const publicContext = await browser.newContext();
+  const publicContext = await browser.newContext({
+    timezoneId: "America/Los_Angeles",
+  });
   const publicPage = await publicContext.newPage();
   const publicURL = `${origin}/events/${fixture.event_id}/`;
   await page.goto(origin + "/organizer/");
@@ -230,6 +232,42 @@ let server, browser;
     await publicPage.getByText("Browser note after reconnect").count(),
     1,
   );
+  assert.match(
+    await publicPage.locator(".visitor-time").first().textContent(),
+    /Your time:.*P[DS]T/,
+  );
+  assert.equal(
+    await publicPage
+      .getByText("A biography pulled from Twitch", { exact: true })
+      .count(),
+    2,
+  );
+  assert.equal(
+    await publicPage.getByText("Live on Twitch", { exact: true }).count(),
+    2,
+  );
+  await publicPage.clock.install();
+  await publicPage.reload();
+  await publicPage.clock.fastForward(180001);
+  assert.equal(
+    await publicPage
+      .getByText("Live status unavailable", { exact: true })
+      .count(),
+    2,
+  );
+  assert.equal(await publicPage.locator(".twitch-now").count(), 0);
+  const fallbackContext = await browser.newContext({
+    javaScriptEnabled: false,
+  });
+  const fallbackPage = await fallbackContext.newPage();
+  await fallbackPage.goto(`${origin}/events/${fixture.event_id}/`);
+  assert.equal(await fallbackPage.locator(".slot-list .slot").count(), 3);
+  assert.equal(await fallbackPage.locator(".visitor-time:visible").count(), 0);
+  assert.equal(
+    await fallbackPage.getByText("Browser note after reconnect").count(),
+    1,
+  );
+  await fallbackContext.close();
   // A streamer cancellation blocks the older draft and needs explicit recovery.
   stage("cancel");
   await page.getByRole("button", { name: "Reload draft" }).click();
@@ -362,6 +400,86 @@ let server, browser;
   await publicPage
     .getByRole("heading", { name: "Edited private event", exact: true })
     .waitFor();
+  await page.bringToFront();
+  await page.getByText("Import a pasted lineup", { exact: true }).click();
+  await page
+    .getByLabel("Pasted lineup", { exact: true })
+    .fill(
+      "*07.09.2026* Pre-Pary: browser_musician 1p: 2p: browser_musician 3p: unknown_login",
+    );
+  await page
+    .getByRole("button", { name: "Review pasted lineup", exact: true })
+    .click();
+  await page
+    .getByRole("region", { name: "Imported slot 1" })
+    .getByLabel("Exclude row")
+    .check();
+  await page
+    .getByLabel("Imported event date", { exact: true })
+    .fill(fixture.day);
+  await page
+    .getByRole("region", { name: "Imported slot 4" })
+    .getByLabel("Channel match")
+    .selectOption("");
+  await page
+    .getByLabel("Replace the entire working lineup.", { exact: false })
+    .check();
+  await page.setViewportSize({ width: 352, height: 900 });
+  assert.equal(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+    true,
+    "Expanded import review fits a phone viewport",
+  );
+  await page.screenshot({
+    path: path.join(dir, "import-352.png"),
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 1400 });
+  await page
+    .getByLabel("I reviewed the dates, times, lengths, and channel matches.", {
+      exact: true,
+    })
+    .check();
+  await page
+    .getByRole("button", { name: "Apply reviewed import", exact: true })
+    .click();
+  await page
+    .getByText("Reviewed import saved privately. Public schedule unchanged.", {
+      exact: true,
+    })
+    .waitFor();
+  await publicPage.reload();
+  assert.equal(
+    await publicPage
+      .getByRole("heading", { name: "Open slot", exact: true })
+      .count(),
+    1,
+  );
+  assert.equal(await page.locator(".timeline-card").count(), 3);
+  await page
+    .getByRole("button", { name: "Publish schedule", exact: true })
+    .click();
+  await page
+    .getByText(
+      "Published. The public schedule and confirmed performances are updated.",
+      { exact: true },
+    )
+    .waitFor();
+  await publicPage.reload();
+  assert.equal(
+    await publicPage
+      .getByRole("heading", { name: "Open slot", exact: true })
+      .count(),
+    2,
+  );
+  assert.equal(
+    await publicPage
+      .getByRole("heading", { name: "Browser Musician", exact: true })
+      .count(),
+    1,
+  );
   // Reload a populated event at each viewport; capture settled screenshots.
   await page.getByLabel("Choose event").selectOption(String(fixture.event_id));
   await page.getByText("Private draft loaded.", { exact: true }).waitFor();
@@ -386,7 +504,7 @@ let server, browser;
   }
   assert.deepEqual(errors, []);
   console.log(
-    "Passed browser workflow: drag assignment/movement, rejected overlap, keyboard editing/assignment, save failure and retry, reload, publication, cancellation recovery, legacy-duration review, event creation/editing, four viewport widths.",
+    "Passed browser workflow: Timeline editing and publication, cancellation recovery, reviewed private import, Twitch status expiry, visitor-local times, JavaScript-disabled public fallback, and desktop/phone layouts.",
   );
   console.log("Screenshots: " + dir);
 })()

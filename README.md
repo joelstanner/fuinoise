@@ -21,6 +21,9 @@ credentials, organizer roles, and live verification. Streamer signup, preference
 requests, confirmed-assignment dashboards, and direct cancellation are implemented;
 see [requests and assignments](docs/requests-and-assignments.md). The React
 Timeline and its API are implemented; see [workspace setup and usage](docs/organizer-workspace.md).
+Reviewed pasted-lineup import, stored Twitch profiles/live status, and visitor-local
+times are implemented; see [import and public information](docs/import-and-public-information.md).
+Notifications, deployment/backup verification, and the real pilot remain.
 
 ## Local setup
 
@@ -39,6 +42,9 @@ Migration 0013 preserves existing schedules and leaves their planned durations
 unknown. Review and enter those durations before saving or publishing a working
 draft. New slots use their event's default length, initially 60 minutes. Public
 pages continue to show existing schedules while awaiting review.
+
+Migration 0016 adds a separate Twitch snapshot table without changing existing
+streamers or schedules. Apply migrations before using the import and refresh tools.
 
 The frontend build requires Node 20.19 or 22.12 or newer in those supported
 series. Build it before collecting static files for deployment.

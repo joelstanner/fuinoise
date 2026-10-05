@@ -8,10 +8,13 @@ from django.shortcuts import get_object_or_404, render
 from django.utils import formats, timezone
 
 from .models import Event, RaidSlot
+from .twitch import public_information
 
 
 def published_events() -> QuerySet[Event]:
-    slots = RaidSlot.objects.select_related("streamer").order_by("start", "id")
+    slots = RaidSlot.objects.select_related("streamer__twitch_snapshot").order_by(
+        "start", "id"
+    )
     return (
         Event.objects.filter(publication_status=Event.PublicationStatus.PUBLISHED)
         .select_related("community")
@@ -27,6 +30,8 @@ def prepare_event(event: Any, now: datetime) -> Any:
     last_day = event.date
     event.public_slots = list(event.raidslot_set.all())
     for slot in event.public_slots:
+        if slot.streamer:
+            slot.twitch = public_information(slot.streamer, now)
         slot.local_start = timezone.localtime(slot.start, zone)
         slot.local_start_display = formats.date_format(
             slot.local_start, "D, M j · g:i A T", use_l10n=False

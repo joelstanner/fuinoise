@@ -118,6 +118,10 @@ assignment service attaches a reviewed request to a slot.
 | `<id>/reset/` POST | Explicitly discard private edits and rebuild from the current schedule. |
 | `<id>/requests/<request_id>/decline/` POST | Decline a request and record private organizer notes. |
 | `<id>/visibility/` POST | Immediately close/open the early signup policy or hide an event using its expected schedule version. |
+| `<id>/import/preview/` POST | Parse pasted text for review without saving records. |
+| `<id>/import/apply/` POST | Apply reviewed slots atomically to the private draft using its expected version. |
+| `<id>/twitch/lookup/` POST | Look up a channel and return a short-lived signed match without creating records. |
+| `<id>/twitch/refresh/` POST | Refresh stored public information for performers in the saved and working lineups. |
 
 Django tests cover authorization, CSRF, complete-timetable conflicts, private
 saves, stale versions, DST validation, request assignment, publication,
@@ -140,14 +144,17 @@ The browser check starts Django with a disposable database and test identities.
 It exercises drag assignment and movement, rejected overlaps, keyboard edits,
 save failures and retry, reload, publication, cancellation recovery, early
 signup, event creation and editing, legacy duration review, and desktop/phone
-layouts. It stops the server and deletes its database and login fixtures when
+layouts. It also checks private import through publication, Twitch status expiry,
+visitor-local times, expanded phone import review, and public rendering without
+JavaScript. It stops the server and deletes its database and login fixtures when
 finished. Screenshots remain in the reported temporary directory.
 
 Use `PLAYWRIGHT_BROWSER_CHANNEL=chrome` to test an installed Chrome instead of a
 downloaded Chromium. Set `PYTHON_BIN` when the project Python executable is not
-`venv/bin/python`. Live Twitch/Discord rehearsal, pasted import, Twitch status,
-visitor-local public times, notifications, deployment, backups, and the real
-pilot remain later work.
+`venv/bin/python`. See [import and public information](import-and-public-information.md)
+for reviewed imports, Twitch configuration, and refresh operations. Live
+Twitch/Discord rehearsal, notifications, deployment, backups, and the real pilot
+remain later work.
 
 Package compatibility and integration references:
 [REST Framework requirements](https://pypi.org/project/djangorestframework/),

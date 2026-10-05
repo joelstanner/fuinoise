@@ -20,7 +20,7 @@
           {% if event.public_slots %}
             <ol class="card-lineup" aria-label="Lineup">
               {% for slot in event.public_slots %}
-                <li><time datetime="{{ slot.local_start_iso }}">{{ slot.local_start_short }}</time><span>{% if slot.streamer %}{{ slot.streamer.display_name }}{% else %}Open slot{% endif %}</span></li>
+                <li><div><time datetime="{{ slot.local_start_iso }}">{{ slot.local_start_short }}</time><span class="visitor-time" data-visitor-time="{{ slot.local_start_iso }}" hidden></span></div><div>{% if slot.streamer %}<span>{{ slot.streamer.display_name }}</span>{% include 'fuinoise_live/twitch_status.html' %}{% else %}<span>Open slot</span>{% endif %}</div></li>
               {% endfor %}
             </ol>
           {% endif %}

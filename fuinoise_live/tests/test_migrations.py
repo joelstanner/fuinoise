@@ -282,3 +282,59 @@ class RequestMigrationTests(MigrationTestCase):
         self.assertEqual(migrated_working.duration_minutes, 90)
         self.assertEqual(migrated_working.raid_slot_note, "Private note")
         self.assertEqual(_fingerprint(LiveEvent.objects.get(pk=event.pk)), fingerprint)
+
+
+class TwitchSnapshotMigrationTests(MigrationTestCase):
+    def test_enrichment_migration_preserves_lineups_and_does_not_invent_identity(self):
+        executor = MigrationExecutor(connection)
+        before = [
+            (
+                "fuinoise_live",
+                "0015_draftslot_request_version_slotrequest_slotpreference_and_more",
+            )
+        ]
+        after = [("fuinoise_live", "0016_twitchsnapshot")]
+        executor.migrate(before)
+        apps = executor.loader.project_state(before).apps
+        community = apps.get_model("fuinoise_live", "Community").objects.create(
+            name="Music", slug="music"
+        )
+        streamer = apps.get_model("fuinoise_live", "Streamer").objects.create(
+            display_name="Chosen name",
+            twitch_username="legacy",
+            organizer_notes="Private notes",
+        )
+        event = apps.get_model("fuinoise_live", "Event").objects.create(
+            date=datetime.date(2026, 10, 4),
+            community=community,
+            publication_status="published",
+        )
+        start = datetime.datetime(2026, 10, 4, 20, tzinfo=datetime.timezone.utc)
+        slot = apps.get_model("fuinoise_live", "RaidSlot").objects.create(
+            event=event,
+            streamer=streamer,
+            start=start,
+            duration_minutes=90,
+            raid_slot_note="Published note",
+            replay_url="https://example.com/replay",
+        )
+        executor = MigrationExecutor(connection)
+        executor.migrate(after)
+        apps = executor.loader.project_state(after).apps
+        migrated = apps.get_model("fuinoise_live", "Streamer").objects.get(
+            pk=streamer.pk
+        )
+        migrated_slot = apps.get_model("fuinoise_live", "RaidSlot").objects.get(
+            pk=slot.pk
+        )
+        self.assertIsNone(migrated.twitch_id)
+        self.assertEqual(migrated.display_name, "Chosen name")
+        self.assertEqual(migrated.organizer_notes, "Private notes")
+        self.assertEqual(migrated_slot.streamer_id, streamer.pk)
+        self.assertEqual(migrated_slot.start, start)
+        self.assertEqual(migrated_slot.duration_minutes, 90)
+        self.assertEqual(migrated_slot.raid_slot_note, "Published note")
+        self.assertEqual(migrated_slot.replay_url, "https://example.com/replay")
+        self.assertFalse(
+            apps.get_model("fuinoise_live", "TwitchSnapshot").objects.exists()
+        )

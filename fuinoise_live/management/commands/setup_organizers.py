@@ -37,6 +37,7 @@ class Command(BaseCommand):
         group, _ = Group.objects.get_or_create(name="Fuinoise organizers")
         codes = (
             "add_event",
+            "add_streamer",
             "change_event",
             "add_raidslot",
             "change_raidslot",

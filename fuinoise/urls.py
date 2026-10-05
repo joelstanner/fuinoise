@@ -22,6 +22,26 @@ from fuinoise_live import account_views, organizer_api, request_views, views
 
 urlpatterns = [
     path(
+        "organizer/api/events/<int:pk>/import/preview/",
+        organizer_api.import_preview_api,
+        name="organizer_import_preview_api",
+    ),
+    path(
+        "organizer/api/events/<int:pk>/import/apply/",
+        organizer_api.import_apply_api,
+        name="organizer_import_apply_api",
+    ),
+    path(
+        "organizer/api/events/<int:pk>/twitch/lookup/",
+        organizer_api.twitch_lookup_api,
+        name="organizer_twitch_lookup_api",
+    ),
+    path(
+        "organizer/api/events/<int:pk>/twitch/refresh/",
+        organizer_api.twitch_refresh_api,
+        name="organizer_twitch_refresh_api",
+    ),
+    path(
         "organizer/api/events/<int:pk>/signup/",
         organizer_api.draft_action_api,
         {"action": "signup"},

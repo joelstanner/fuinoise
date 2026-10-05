@@ -33,6 +33,7 @@ from fuinoise_live.models import (  # noqa: E402
     RaidSlot,
     SlotPreference,
     SlotRequest,
+    TwitchSnapshot,
 )
 from fuinoise_live.providers import TwitchIdentity  # noqa: E402
 from fuinoise_live.requests import withdraw_slot_request  # noqa: E402
@@ -49,6 +50,17 @@ if sys.argv[1] == "serve":
     account.participation_status = "approved"
     account.discord_override = True
     account.save()
+    TwitchSnapshot.objects.create(
+        streamer=account.streamer,
+        user_id=account.streamer.twitch_id,
+        login=account.streamer.twitch_username,
+        display_name="Twitch Browser Musician",
+        description="A biography pulled from Twitch",
+        profile_checked_at=timezone.now(),
+        is_live=True,
+        status_checked_at=timezone.now(),
+        stream_title="Browser live music",
+    )
     community = Community.objects.create(
         name="Browser community", slug="browser", default_time_zone="UTC"
     )

@@ -408,3 +408,59 @@
 .timeline-card > button {
   padding-right: 33px;
 }
+.lineup-import {
+  margin-bottom: 18px;
+}
+.import-row {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 14px;
+  margin: 14px 0;
+}
+.import-row-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  align-items: start;
+}
+.import-row-heading strong {
+  font-size: 0.88rem;
+}
+.import-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr 0.6fr 1.5fr;
+  gap: 12px;
+}
+.import-issue {
+  color: #eaca83;
+}
+.lookup-fields {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+}
+.lookup-fields label {
+  flex: 1;
+  margin-bottom: 0;
+}
+.lineup-import p {
+  max-width: 900px;
+}
+.lookup-fields {
+  margin-bottom: 15px;
+}
+@media (max-width: 680px) {
+  .import-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+  .lookup-fields {
+    align-items: start;
+    flex-direction: column;
+  }
+  .lookup-fields label {
+    width: 100%;
+  }
+  .import-row-heading {
+    flex-wrap: wrap;
+  }
+}

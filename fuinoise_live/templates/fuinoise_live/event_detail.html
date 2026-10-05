@@ -7,7 +7,7 @@
       <p class="eyebrow">{{ event.date|date:"l, F j, Y" }}</p>
       <h1>{{ event.name }}</h1>
       {% if event.description %}<p class="lead">{{ event.description }}</p>{% endif %}
-      <p class="event-meta">All lineup times are shown in {{ event.event_time_zone }}.</p>
+      <p class="event-meta">Event times: {{ event.event_time_zone }}.</p>
     </div>
     <aside class="community-panel">
       {% if event.community.logo_url %}<img class="detail-logo" src="{{ event.community.logo_url }}" alt="" loading="lazy">{% endif %}
@@ -24,9 +24,19 @@
           <li class="slot">
             <span class="slot-position">{{ forloop.counter|stringformat:"02d" }}</span>
             <div class="slot-main">
-              {% if slot.streamer %}<h3><a href="{{ slot.streamer.twitch_url }}" rel="noopener noreferrer">{{ slot.streamer.display_name }}</a></h3>{% else %}<h3 class="open-slot">Open slot</h3>{% endif %}
-              <p><time datetime="{{ slot.local_start_iso }}">{{ slot.local_start_display }}</time></p>
-              {% if slot.duration_minutes %}<p>Planned: {{ slot.duration_minutes }} minutes · ends <time datetime="{{ slot.local_end_iso }}">{{ slot.local_end_display }}</time></p>{% endif %}
+              {% if slot.streamer %}
+                <div class="performer-info">
+                  {% if slot.twitch.image_url %}<img class="twitch-avatar" src="{{ slot.twitch.image_url }}" alt="" loading="lazy" referrerpolicy="no-referrer">{% endif %}
+                  <div><h3><a href="{{ slot.twitch.url }}" rel="noopener noreferrer">{{ slot.streamer.display_name }}</a></h3>
+                    {% include 'fuinoise_live/twitch_status.html' %}
+                    {% if slot.twitch.display_name %}<p class="twitch-profile-name">On Twitch: {{ slot.twitch.display_name }}</p>{% endif %}
+                  </div>
+                </div>
+                {% if slot.twitch.description %}<p class="twitch-description">{{ slot.twitch.description }}</p>{% endif %}
+                {% if slot.twitch.title %}<p class="twitch-now">Streaming: {{ slot.twitch.title }}{% if slot.twitch.game %} · {{ slot.twitch.game }}{% endif %}</p>{% endif %}
+              {% else %}<h3 class="open-slot">Open slot</h3>{% endif %}
+              <p>Event time: <time datetime="{{ slot.local_start_iso }}">{{ slot.local_start_display }}</time><span class="visitor-time" data-visitor-time="{{ slot.local_start_iso }}" hidden></span></p>
+              {% if slot.duration_minutes %}<p>Planned: {{ slot.duration_minutes }} minutes · ends <time datetime="{{ slot.local_end_iso }}">{{ slot.local_end_display }}</time><span class="visitor-time" data-visitor-time="{{ slot.local_end_iso }}" hidden></span></p>{% endif %}
               {% if slot.raid_slot_note %}<p class="slot-note">{{ slot.raid_slot_note }}</p>{% endif %}
             </div>
             {% if slot.replay_url %}<a class="text-link" href="{{ slot.replay_url }}" rel="noopener noreferrer">Replay ↗</a>{% endif %}

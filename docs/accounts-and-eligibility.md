@@ -70,8 +70,10 @@ venv/bin/python manage.py setup_organizers --twitch-id VERIFIED_TWITCH_ID
 ```
 
 For an existing maintenance user, use `--username EXISTING_DJANGO_USERNAME` instead.
-The command assigns scheduling, participation-review, and Discord-override
-permissions. It can be rerun safely and does not grant staff or superuser access.
+The command assigns scheduling, participation-review, Discord-override, and
+streamer-creation permissions. Rerun it for existing organizers to allow new
+Twitch channel matches during import. It can be rerun safely and does not grant
+staff or superuser access.
 Organizer reviews are at `/organizer/eligibility/`; the account page links to them
 when the user has review or override permission.
 

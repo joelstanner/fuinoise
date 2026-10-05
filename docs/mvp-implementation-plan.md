@@ -18,8 +18,10 @@ still needs credentials and the Fuinoise server configuration; see
 dashboards, cancellation, and backend organizer assignment operations are now
 implemented; see [workflow details](requests-and-assignments.md). The custom
 React Timeline and Django REST Framework API are implemented; see
-[workspace documentation](organizer-workspace.md). Import, public enrichment,
-notification delivery, deployment, and the pilot remain future milestones.
+[workspace documentation](organizer-workspace.md). Reviewed import, Twitch public
+information, and visitor-local times are implemented; see
+[import documentation](import-and-public-information.md). Notification delivery,
+deployment, and the pilot remain future milestones.
 
 Milestone 1 is implemented and verified with Django tests, including migration
 preservation, draft privacy, complete interval validation, stale writes, atomic
@@ -31,7 +33,15 @@ reviewed early signup release, legacy duration review, and stale-draft recovery.
 Browser verification covers those workflows, save failures and retry, and four
 desktop/phone widths. CI now runs the Python tests with an 80 percent coverage
 minimum, frontend checks and unit tests, a production build, and the isolated
-browser workflow. Milestone 5 is next.
+browser workflow.
+
+Milestone 5 is implemented with reviewed private imports, optional verified Twitch
+channel lookup, stored public profiles and expiring live status, and visitor-local
+times. Tests cover atomic failures, identity preservation, outages, ambiguous dates,
+overnight times, and migration preservation. Browser checks cover import privacy
+through publication, status expiry, local times, phone review, and the public
+fallback without JavaScript. Live provider rehearsal remains pending configuration.
+Milestone 6, notifications, is next.
 
 ## Implementation sequence
 

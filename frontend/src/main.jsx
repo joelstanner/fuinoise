@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import { createRoot } from "react-dom/client";
+import ImportReview from "./ImportReview.jsx";
 import { dayTicks, moveSlots, slotInput, slotLayout } from "./schedule.js";
 import "./workspace.css";
 
@@ -544,6 +545,37 @@ function App() {
         </section>
       )}
       {work && (
+        <ImportReview
+          key={work.event_id}
+          event={work.event}
+          version={work.version}
+          catalog={catalog}
+          disabled={blocked}
+          preview={(source) =>
+            api(`${base}${work.event_id}/import/preview/`, "POST", { source })
+          }
+          lookup={(login) =>
+            api(`${base}${work.event_id}/twitch/lookup/`, "POST", { login })
+          }
+          apply={async (data) => {
+            const ok = await run(
+              () =>
+                api(`${base}${work.event_id}/import/apply/`, "POST", {
+                  ...data,
+                  event: eventInput(data.event),
+                }),
+              "Reviewed import saved privately. Public schedule unchanged.",
+            );
+            if (ok) {
+              setSelected(null);
+              setDay(workRef.current.event.date);
+              await refreshCatalog().catch(() => {});
+            }
+            return ok;
+          }}
+        />
+      )}
+      {work && (
         <div className="workspace-grid">
           <section
             className="workspace-panel requests-panel"
@@ -773,6 +805,25 @@ function App() {
           </section>
           <aside className="workspace-panel details-panel" aria-label="Details">
             <h2>Details</h2>
+            <button
+              disabled={busy || hasEdits}
+              onClick={async () => {
+                await run(async () => {
+                  const result = await api(
+                    `${base}${work.event_id}/twitch/refresh/`,
+                    "POST",
+                    {},
+                  );
+                  if (result.failed)
+                    throw new Error(
+                      `${result.updated} channels refreshed; ${result.failed} unavailable. The schedule is unchanged.`,
+                    );
+                  return null;
+                }, "Twitch information refreshed. The schedule is unchanged.");
+              }}
+            >
+              Refresh Twitch information
+            </button>
             {slot ? (
               <div id="slot-details">
                 <h3>{slot.name}</h3>

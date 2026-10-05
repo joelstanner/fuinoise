@@ -1,9 +1,11 @@
 """Same-origin organizer API; scheduling services own all write rules."""
 
+from dataclasses import asdict
 from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from django.core import signing
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import transaction
 from django.http import HttpRequest, HttpResponse
@@ -17,6 +19,7 @@ from rest_framework.response import Response
 from rest_framework.views import exception_handler
 
 from .accounts import is_eligible
+from .lineup_import import SIGNING_SALT, apply_lineup, preview_lineup
 from .models import (
     Community,
     Event,
@@ -39,6 +42,7 @@ from .scheduling import (
     reset_schedule_draft,
     save_schedule_draft,
 )
+from .twitch import lookup_profile, refresh_streamers
 
 
 def api_exception_handler(error: Exception, context: Any) -> Any:
@@ -125,6 +129,49 @@ class VisibilitySerializer(StrictSerializer):
     schedule_version = serializers.IntegerField(min_value=0)
     publication_status = serializers.ChoiceField(choices=["draft", "private"])
     signup_before_publication = serializers.BooleanField()
+
+
+class PreviewSerializer(StrictSerializer):
+    source = serializers.CharField(max_length=12000)
+
+
+class LookupSerializer(StrictSerializer):
+    login = serializers.RegexField(r"^[a-zA-Z0-9_]{1,25}$")
+
+
+class ImportRowSerializer(StrictSerializer):
+    local_start = serializers.CharField()
+    duration_minutes = serializers.IntegerField(min_value=1)
+    streamer_id = serializers.IntegerField(min_value=1, allow_null=True)
+    lookup_token = serializers.CharField(
+        required=False, allow_blank=True, max_length=6000
+    )
+    display_name = serializers.CharField(
+        required=False, allow_blank=True, max_length=80
+    )
+    raid_slot_note = serializers.CharField(
+        required=False, allow_blank=True, allow_null=True, max_length=255
+    )
+
+    def validate_local_start(self, value: str) -> datetime:
+        try:
+            local = datetime.fromisoformat(value)
+        except ValueError as error:
+            raise serializers.ValidationError(
+                "Enter a valid local date and time."
+            ) from error
+        if timezone.is_aware(local):
+            raise serializers.ValidationError(
+                "Enter the date/time in the event zone without an offset."
+            )
+        return local
+
+
+class ImportSerializer(VersionSerializer):
+    event = EventFieldsSerializer()
+    rows = ImportRowSerializer(many=True)
+    replace = serializers.BooleanField()
+    reviewed = serializers.BooleanField()
 
 
 def validated(cls: Any, request: Any) -> dict[str, Any]:
@@ -368,3 +415,86 @@ def visibility_api(request: Any, pk: int) -> Response:
     )
     draft = get_object_or_404(ScheduleDraft, event=event)
     return Response(draft_payload(draft, stale=True))
+
+
+@never_cache
+@api_view(["POST"])
+def import_preview_api(request: Any, pk: int) -> Response:
+    draft = get_schedule_draft(pk, actor=request.user)
+    data = validated(PreviewSerializer, request)
+    return Response(preview_lineup(data["source"], draft))
+
+
+@never_cache
+@api_view(["POST"])
+def twitch_lookup_api(request: Any, pk: int) -> Response:
+    get_object_or_404(Event, pk=pk)
+    data = validated(LookupSerializer, request)
+    from .providers import ProviderError
+
+    try:
+        profile = lookup_profile(data["login"])
+    except ProviderError as error:
+        return Response({"errors": [str(error)]}, status=503)
+    token = signing.dumps(
+        {"actor_id": request.user.pk, "event_id": pk, "profile": asdict(profile)},
+        salt=SIGNING_SALT,
+    )
+    existing = Streamer.objects.filter(twitch_id=profile.id).first()
+    if (
+        existing is None
+        and Streamer.objects.filter(twitch_username__iexact=profile.login).exists()
+    ):
+        return Response(
+            {
+                "errors": [
+                    "This channel name belongs to an existing local record. "
+                    "Select and review that record instead."
+                ]
+            },
+            status=409,
+        )
+    return Response(
+        {
+            "profile": asdict(profile),
+            "streamer_id": existing.pk if existing else None,
+            "lookup_token": "" if existing else token,
+        }
+    )
+
+
+@never_cache
+@api_view(["POST"])
+def import_apply_api(request: Any, pk: int) -> Response:
+    draft = get_object_or_404(ScheduleDraft, event_id=pk)
+    data = validated(ImportSerializer, request)
+    saved = apply_lineup(
+        draft.pk,
+        actor=request.user,
+        expected_version=data["version"],
+        event_changes=data["event"],
+        rows=data["rows"],
+        replace=data["replace"],
+        reviewed=data["reviewed"],
+    )
+    return Response(draft_payload(saved))
+
+
+@never_cache
+@api_view(["POST"])
+def twitch_refresh_api(request: Any, pk: int) -> Response:
+    event = get_object_or_404(Event, pk=pk)
+    ids = set(
+        event.raidslot_set.exclude(streamer=None).values_list("streamer_id", flat=True)
+    )
+    draft = ScheduleDraft.objects.filter(event=event).first()
+    if draft:
+        ids.update(
+            draft.slots.exclude(streamer=None).values_list("streamer_id", flat=True)
+        )
+    if len(ids) > 100:
+        raise ValidationError(
+            "Use the refresh_twitch command for more than 100 channels."
+        )
+    updated, failed = refresh_streamers(sorted(ids))
+    return Response({"updated": updated, "failed": failed})
