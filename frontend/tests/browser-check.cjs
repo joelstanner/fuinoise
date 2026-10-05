@@ -417,6 +417,43 @@ let server, browser;
   await page
     .getByLabel("Imported event date", { exact: true })
     .fill(fixture.day);
+  const unmatchedRow = page.getByRole("region", { name: "Imported slot 4" });
+  const twitchUsername = unmatchedRow.getByLabel("Twitch username");
+  const lookupButton = unmatchedRow.getByRole("button", {
+    name: "Look up Twitch channel",
+  });
+  assert.equal(await twitchUsername.inputValue(), "unknown_login");
+  await twitchUsername.fill("   ");
+  assert.equal(await lookupButton.isDisabled(), true);
+  let lookupRequests = 0;
+  const lookupRoute = "**/organizer/api/events/*/twitch/lookup/";
+  await page.route(lookupRoute, async (route) => {
+    lookupRequests += 1;
+    assert.deepEqual(route.request().postDataJSON(), {
+      login: "unknown_login",
+    });
+    await route.fulfill({
+      json: {
+        profile: { display_name: "Unknown channel" },
+        streamer_id: null,
+        lookup_token: "browser-test-match",
+      },
+    });
+  });
+  await twitchUsername.fill("invalid channel!");
+  await lookupButton.click();
+  await page
+    .getByText(
+      "Enter a Twitch username using only letters, numbers, and underscores.",
+      { exact: true },
+    )
+    .waitFor();
+  assert.equal(lookupRequests, 0);
+  await twitchUsername.fill(" Unknown_Login ");
+  await lookupButton.click();
+  await unmatchedRow.getByLabel("Name shown on Fuinoise").waitFor();
+  assert.equal(lookupRequests, 1);
+  await page.unroute(lookupRoute);
   await page
     .getByRole("region", { name: "Imported slot 4" })
     .getByLabel("Channel match")

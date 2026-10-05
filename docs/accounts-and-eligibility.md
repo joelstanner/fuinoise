@@ -8,8 +8,12 @@ in [the request workflow](requests-and-assignments.md).
 
 ## Provider configuration
 
-Set these environment variables before starting Django. The application reads the
-process environment; it does not automatically load a `.env` file.
+For local development, copy `.env.example` to `.env` in the project root and enter
+these values there. Django loads `.env` automatically before reading settings.
+Existing process environment variables take precedence, including empty values.
+Restart Django after editing `.env`. The file is ignored by Git; keep actual
+credentials out of `.env.example`. Hosted services can continue to supply their
+settings through the process environment.
 
 | Variable | Purpose |
 | --- | --- |

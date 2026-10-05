@@ -71,7 +71,12 @@ def match_streamer(raw: str) -> dict[str, Any]:
             "matched_name": matches[0].display_name,
             "needs_match": False,
         }
-    return {"streamer_id": None, "matched_name": "", "needs_match": True}
+    return {
+        "streamer_id": None,
+        "matched_name": "",
+        "needs_match": True,
+        "login": login,
+    }
 
 
 def preview_lineup(source: str, draft: ScheduleDraft) -> dict[str, Any]:

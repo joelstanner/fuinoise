@@ -44,7 +44,7 @@ export default function ImportReview({
           excluded: false,
           lookup_token: "",
           display_name: "",
-          login: "",
+          login: row.login || "",
           selection: row.needs_match ? "unmatched" : (row.streamer_id ?? ""),
         })),
       });
@@ -76,10 +76,17 @@ export default function ImportReview({
   }
   async function match(index) {
     const row = review.rows[index];
+    const login = row.login.trim().toLowerCase();
+    if (!/^[a-z0-9_]{1,25}$/.test(login)) {
+      setError(
+        "Enter a Twitch username using only letters, numbers, and underscores.",
+      );
+      return;
+    }
     setLoading(true);
     setError("");
     try {
-      const result = await lookup(row.login);
+      const result = await lookup(login);
       update(index, {
         needs_match: false,
         streamer_id: result.streamer_id,
@@ -314,12 +321,17 @@ export default function ImportReview({
                         <input
                           value={row.login}
                           maxLength="25"
+                          placeholder="channel_name"
                           onChange={(e) =>
                             update(index, { login: e.target.value })
                           }
                         />
                       </label>
-                      <button type="button" onClick={() => match(index)}>
+                      <button
+                        type="button"
+                        disabled={!row.login.trim()}
+                        onClick={() => match(index)}
+                      >
                         Look up Twitch channel
                       </button>
                     </div>

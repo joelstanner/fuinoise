@@ -92,6 +92,18 @@ class LineupImportTests(TestCase):
             salt=SIGNING_SALT,
         )
 
+    def test_unmatched_channels_prefill_only_recognizable_twitch_usernames(self):
+        parsed = preview_lineup(
+            "10a: Unknown_Login 11a: @another_channel "
+            "12p: https://www.twitch.tv/Third_Channel/ 1p: A performer name",
+            self.draft,
+        )
+        self.assertTrue(all(row["needs_match"] for row in parsed["rows"]))
+        self.assertEqual(
+            [row["login"] for row in parsed["rows"]],
+            ["unknown_login", "another_channel", "third_channel", ""],
+        )
+
     def test_example_preserves_untimed_text_empty_slots_and_ambiguous_date(self):
         parsed = preview_lineup(
             "*07.09.2026* Pre-Pary: P_chops 10a: 11a: ActuallySparky 12p: 1p:",

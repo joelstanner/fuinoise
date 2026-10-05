@@ -37,11 +37,18 @@ Use Python 3.13. Create a virtual environment and install the dependencies:
 ```sh
 python3 -m venv venv
 venv/bin/python -m pip install -r requirements.txt
+cp .env.example .env
 npm --prefix frontend ci
 npm --prefix frontend run build
 venv/bin/python manage.py migrate
 venv/bin/python manage.py runserver
 ```
+
+Edit `.env` with your Twitch client ID and secret to enable Twitch sign-in and
+channel lookup. Django automatically loads this file from the project root;
+existing environment variables take precedence. `.env` is ignored by Git.
+Restart the server after changing it. Optional Discord settings are included
+in the example; see [account setup](docs/accounts-and-eligibility.md).
 
 Migration 0013 preserves existing schedules and leaves their planned durations
 unknown. Review and enter those durations before saving or publishing a working

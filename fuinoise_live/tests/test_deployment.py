@@ -50,6 +50,7 @@ class ProductionSettingsTests(SimpleTestCase):
             if not key.startswith(("DJANGO_", "FUINOISE_"))
         }
         env.update(
+            PYTHON_DOTENV_DISABLED="1",
             DJANGO_DEBUG="0",
             DJANGO_SECRET_KEY="abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
             DJANGO_ALLOWED_HOSTS="fuinoise.example",
