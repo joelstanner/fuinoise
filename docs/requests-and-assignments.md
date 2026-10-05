@@ -3,7 +3,8 @@
 Streamers can now submit preferred slots, review their requests and confirmed
 performances, withdraw requests, and cancel individual performances. Organizer
 assignment operations are available in the React Timeline and its API; see
-[workspace setup and usage](organizer-workspace.md). Discord notifications remain milestone 6.
+[workspace setup and usage](organizer-workspace.md). On-site notifications and
+queued Discord delivery are implemented; see [notification operations](notifications.md).
 
 ## Streamer workflow
 
@@ -108,5 +109,6 @@ withdrawal on desktop and phone layouts. The local SQLite database is untouched.
 Live Twitch and Discord rehearsal still needs the configuration described in
 [account setup](accounts-and-eligibility.md). Organizer browser checks now cover
 drag assignment, keyboard controls, save failure recovery, publication, and
-cancellation followed by a stale draft. Notification delivery and
-the real-event pilot remain release requirements.
+cancellation followed by a stale draft. Notification privacy, read marks, and
+safe retries are also verified. Real Discord delivery, recurring worker setup,
+and the real-event pilot remain release requirements.

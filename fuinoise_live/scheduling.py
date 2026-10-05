@@ -292,6 +292,11 @@ def _apply_schedule_draft(
 
     validate_request_assignments(event, slots)
     previous = {slot.pk: slot for slot in event.raidslot_set.all()}
+    was_public = event.publication_status == Event.PublicationStatus.PUBLISHED
+    metadata_changed = any(
+        getattr(event, field) != getattr(draft, field)
+        for field in ("name", "description", "date", "event_time_zone", "community_id")
+    )
     source_ids = {slot.source_slot_id for slot in slots if slot.source_slot_id}
     if not source_ids.issubset(previous):
         raise ValidationError("Draft slots must refer to slots from the same event.")
@@ -343,6 +348,12 @@ def _apply_schedule_draft(
     draft.base_schedule_version = event.schedule_version
     draft.base_fingerprint = _fingerprint(event)
     draft.save()
+    if not for_signup:
+        from .notifications import publication_notices
+
+        publication_notices(
+            event, previous, was_public=was_public, metadata_changed=metadata_changed
+        )
     return PublicationResult(
         event.pk, event.schedule_version, tuple(confirmed), tuple(changed)
     )
@@ -390,5 +401,9 @@ def cancel_published_assignment(
         raise PermissionDenied("A streamer can only cancel their own assignment.")
     RaidSlot.objects.filter(pk=slot.pk).update(streamer=None, signup_request=None)
     Event.objects.filter(pk=event.pk).update(schedule_version=F("schedule_version") + 1)
+    event.refresh_from_db()
+    from .notifications import assignment_notice
+
+    assignment_notice(event, slot, "canceled")
     # Existing drafts retain their edits but are stale until explicitly reset.
     return True

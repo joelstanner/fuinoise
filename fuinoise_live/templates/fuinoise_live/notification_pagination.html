@@ -1,0 +1,4 @@
+{% if page.has_previous or page.has_next %}<nav class="account-actions" aria-label="Notification pages">
+{% if page.has_previous %}<a href="?page={{ page.previous_page_number }}{% if selected_status %}&amp;status={{ selected_status|urlencode }}{% endif %}">Previous</a>{% endif %}
+<span>Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+{% if page.has_next %}<a href="?page={{ page.next_page_number }}{% if selected_status %}&amp;status={{ selected_status|urlencode }}{% endif %}">Next</a>{% endif %}</nav>{% endif %}

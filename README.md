@@ -23,7 +23,9 @@ see [requests and assignments](docs/requests-and-assignments.md). The React
 Timeline and its API are implemented; see [workspace setup and usage](docs/organizer-workspace.md).
 Reviewed pasted-lineup import, stored Twitch profiles/live status, and visitor-local
 times are implemented; see [import and public information](docs/import-and-public-information.md).
-Notifications, deployment/backup verification, and the real pilot remain.
+On-site notifications and queued Discord delivery are implemented; see
+[notification setup and operations](docs/notifications.md). Deployment/backup
+verification, live provider rehearsal, and the real pilot remain.
 
 ## Local setup
 

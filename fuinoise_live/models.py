@@ -8,6 +8,7 @@ from django.contrib import admin
 from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models.functions import Lower
+from django.utils import timezone
 
 EVENT_TIME_ZONE_DEFAULT = zoneinfo.ZoneInfo("GMT")
 
@@ -127,6 +128,75 @@ class TwitchSnapshot(models.Model):
     stream_started_at = models.DateTimeField(null=True, blank=True)
     last_attempt_at = models.DateTimeField(null=True, blank=True)
     refresh_error = models.CharField(max_length=255, blank=True, default="")
+
+
+class Notification(models.Model):
+    """Immutable occurrence; a null recipient is the current organizer audience."""
+
+    key = models.CharField(max_length=200, unique=True)
+    kind = models.CharField(max_length=40)
+    event = models.ForeignKey("Event", on_delete=models.SET_NULL, null=True)
+    recipient = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True
+    )
+    title = models.CharField(max_length=160)
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-created_at", "-id")
+
+
+class NotificationRead(models.Model):
+    notification = models.ForeignKey(
+        Notification, on_delete=models.CASCADE, related_name="reads"
+    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("notification", "user"), name="notification_read_once"
+            )
+        ]
+
+
+class DiscordDelivery(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Waiting to send"
+        SENDING = "sending", "Sending"
+        SENT = "sent", "Delivered"
+        FAILED = "failed", "Needs attention"
+        UNCERTAIN = "uncertain", "Delivery needs verification"
+
+    notification = models.OneToOneField(
+        Notification, on_delete=models.CASCADE, related_name="delivery"
+    )
+    status = models.CharField(
+        max_length=16, choices=Status.choices, default=Status.PENDING
+    )
+    target_id = models.CharField(max_length=32, blank=True, default="")
+    guild_id = models.CharField(max_length=32, blank=True, default="")
+    channel_id = models.CharField(max_length=32, blank=True, default="")
+    message_id = models.CharField(max_length=32, blank=True, default="")
+    # The worker fixes content before sending, also used to verify a lost receipt.
+    content = models.TextField(blank=True, default="")
+    nonce = models.CharField(max_length=25, unique=True)
+    attempts = models.PositiveIntegerField(default=0)
+    cycle_attempts = models.PositiveIntegerField(default=0)
+    next_attempt_at = models.DateTimeField(default=timezone.now)
+    claimed_at = models.DateTimeField(null=True, blank=True)
+    message_attempted_at = models.DateTimeField(null=True, blank=True)
+    claim_token = models.UUIDField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+    last_error = models.CharField(max_length=255, blank=True, default="")
+
+
+class DiscordDispatchState(models.Model):
+    """Shared cooldown across worker processes, including global rate limits."""
+
+    pause_until = models.DateTimeField(default=timezone.now)
 
 
 class StreamerAccount(models.Model):

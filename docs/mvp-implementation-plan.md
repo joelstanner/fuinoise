@@ -20,8 +20,9 @@ implemented; see [workflow details](requests-and-assignments.md). The custom
 React Timeline and Django REST Framework API are implemented; see
 [workspace documentation](organizer-workspace.md). Reviewed import, Twitch public
 information, and visitor-local times are implemented; see
-[import documentation](import-and-public-information.md). Notification delivery,
-deployment, and the pilot remain future milestones.
+[import documentation](import-and-public-information.md). On-site notifications
+and queued Discord delivery are implemented; see [notification operations](notifications.md).
+Production worker configuration, hosted rehearsal, deployment, and the pilot remain.
 
 Milestone 1 is implemented and verified with Django tests, including migration
 preservation, draft privacy, complete interval validation, stale writes, atomic
@@ -41,7 +42,13 @@ times. Tests cover atomic failures, identity preservation, outages, ambiguous da
 overnight times, and migration preservation. Browser checks cover import privacy
 through publication, status expiry, local times, phone review, and the public
 fallback without JavaScript. Live provider rehearsal remains pending configuration.
-Milestone 6, notifications, is next.
+Milestone 6 is implemented with transactionally recorded on-site notices and a
+Discord outbox, private inboxes/read marks, organizer delivery review, conditional
+worker claims, persisted rate-limit cooldowns, and bounded safe retries. Lost
+message receipts are held for verification rather than blindly resent. Tests and
+browser checks cover privacy, publication changes, cancellation, retry, and phone
+layouts. Real Discord delivery and recurring worker setup remain hosted rehearsal
+requirements. Milestone 7, deployment and pilot, is next.
 
 ## Implementation sequence
 
@@ -119,8 +126,9 @@ rebuilds the draft from the current public schedule; stale saves never silently
 discard or overwrite those edits.
 
 Publication returns changed slot IDs and newly confirmed assignment IDs for
-later notification integration. Repeated publication of unchanged assignments
-returns no new confirmations. Notification delivery is milestone 6.
+notification integration. Repeated publication of unchanged assignments returns
+no new confirmations or notices. The milestone 6 outbox records changes in the
+same transaction as publication.
 
 Maintenance Admin edits continue to update canonical records directly. They
 invalidate an existing working draft, including changes detected outside these

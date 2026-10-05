@@ -32,6 +32,7 @@ def _account(request: HttpRequest) -> Any:
 @require_GET
 def account_home(request: HttpRequest) -> HttpResponse:
     account = _account(request)
+    from .notifications import visible_notifications
     from .request_views import dashboard_context
 
     return render(
@@ -46,6 +47,7 @@ def account_home(request: HttpRequest) -> HttpResponse:
             "can_review": request.user.has_perm("fuinoise_live.review_eligibility")
             or request.user.has_perm("fuinoise_live.override_discord_requirement"),
             **(dashboard_context(account.streamer) if account else {}),
+            "recent_notifications": visible_notifications(request.user)[:5],
         },
     )
 

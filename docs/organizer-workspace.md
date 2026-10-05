@@ -71,8 +71,9 @@ together; this does not invent durations for existing records.
 
 **Publish schedule** applies the complete update atomically. Public visitors see
 the result and streamers see confirmed performances. Repeating publication does
-not create duplicate assignment confirmations. Notification delivery remains
-milestone 6.
+not create duplicate assignment confirmations. Publication now records notifications
+for confirmations, removals, and changed performances; see
+[notification operations](notifications.md).
 
 ## Signup before public publication
 
@@ -153,8 +154,9 @@ Use `PLAYWRIGHT_BROWSER_CHANNEL=chrome` to test an installed Chrome instead of a
 downloaded Chromium. Set `PYTHON_BIN` when the project Python executable is not
 `venv/bin/python`. See [import and public information](import-and-public-information.md)
 for reviewed imports, Twitch configuration, and refresh operations. Live
-Twitch/Discord rehearsal, notifications, deployment, backups, and the real pilot
-remain later work.
+Twitch/Discord rehearsal, recurring delivery setup, deployment, backups, and the
+real pilot remain later work. Browser checks also cover private notifications,
+persisted read marks without JavaScript, organizer retry queues, and phone layouts.
 
 Package compatibility and integration references:
 [REST Framework requirements](https://pypi.org/project/djangorestframework/),

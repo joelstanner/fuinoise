@@ -502,9 +502,112 @@ let server, browser;
       fullPage: true,
     });
   }
+  // Read alerts without JavaScript and queue a failed Discord delivery safely.
+  const inboxContext = await browser.newContext({
+    javaScriptEnabled: false,
+    viewport: { width: 352, height: 900 },
+  });
+  await inboxContext.addCookies([
+    {
+      name: "sessionid",
+      value: fixture.streamer_session_id,
+      url: origin,
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+  ]);
+  const inboxPage = await inboxContext.newPage();
+  await inboxPage.goto(`${origin}/notifications/`);
+  assert.equal(
+    await inboxPage
+      .getByRole("heading", { name: "Performance canceled", exact: true })
+      .count(),
+    1,
+  );
+  assert.ok(
+    (await inboxPage
+      .getByRole("heading", { name: "Performance confirmed", exact: true })
+      .count()) >= 2,
+  );
+  assert.equal(
+    await inboxPage.getByText("For organizers", { exact: false }).count(),
+    0,
+  );
+  const firstNotice = inboxPage.locator(".notification-card").first();
+  const firstId = await firstNotice.getAttribute("id");
+  await firstNotice
+    .getByRole("button", { name: "Mark as read", exact: true })
+    .click();
+  await inboxPage
+    .locator(`#${firstId}`)
+    .getByText("Read", { exact: false })
+    .waitFor();
+  await inboxPage.reload();
+  assert.equal(
+    await inboxPage
+      .locator(`#${firstId}`)
+      .getByRole("button", { name: "Mark as read", exact: true })
+      .count(),
+    0,
+  );
+  assert.ok(
+    await inboxPage.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  );
+  await inboxPage.screenshot({
+    path: path.join(dir, "notifications-352.png"),
+    fullPage: true,
+  });
+  assert.equal(
+    (
+      await inboxContext.request.get(`${origin}/organizer/notifications/`)
+    ).status(),
+    403,
+  );
+  assert.equal(
+    (
+      await publicContext.request.get(`${origin}/notifications/`, {
+        maxRedirects: 0,
+      })
+    ).status(),
+    302,
+  );
+  stage("fail_notifications");
+  await page.goto(`${origin}/organizer/notifications/?status=failed`);
+  await page
+    .getByRole("heading", { name: "Discord deliveries", exact: true })
+    .waitFor();
+  const failedDelivery = page.locator(".notification-card").first();
+  const deliveryId = await failedDelivery.getAttribute("id");
+  await failedDelivery
+    .getByRole("button", { name: "Queue retry", exact: true })
+    .click();
+  await page
+    .getByText("Retry queued for the next delivery run.", {
+      exact: true,
+    })
+    .waitFor();
+  await page
+    .locator(`#${deliveryId}`)
+    .getByText("Waiting to send", { exact: true })
+    .waitFor();
+  for (const width of [1440, 352]) {
+    await page.setViewportSize({ width, height: 900 });
+    assert.ok(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    );
+    await page.screenshot({
+      path: path.join(dir, `deliveries-${width}.png`),
+      fullPage: true,
+    });
+  }
+  await inboxContext.close();
   assert.deepEqual(errors, []);
   console.log(
-    "Passed browser workflow: Timeline editing and publication, cancellation recovery, reviewed private import, Twitch status expiry, visitor-local times, JavaScript-disabled public fallback, and desktop/phone layouts.",
+    "Passed browser workflow: Timeline editing and publication, reviewed import, public information, private notifications and persisted read marks without JavaScript, organizer delivery retry, and desktop/phone layouts.",
   );
   console.log("Screenshots: " + dir);
 })()

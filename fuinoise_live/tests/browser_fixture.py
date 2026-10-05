@@ -19,6 +19,7 @@ settings.SESSION_COOKIE_SECURE = False
 settings.CSRF_COOKIE_SECURE = False
 settings.ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 settings.INTERNAL_IPS = []
+settings.DISCORD_BOT_TOKEN = ""
 django.setup()
 
 from django.contrib.auth import get_user_model  # noqa: E402
@@ -138,5 +139,9 @@ else:
             actor=get_user_model().objects.get(pk=fixture["user_id"]),
             expected_version=request.version,
         )
+    elif sys.argv[1] == "fail_notifications":
+        from fuinoise_live.discord_delivery import deliver_pending
+
+        deliver_pending()
     else:
         raise ValueError("Unknown browser fixture operation.")

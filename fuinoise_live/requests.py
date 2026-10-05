@@ -19,6 +19,7 @@ from .models import (
     Streamer,
     StreamerAccount,
 )
+from .notifications import request_notice
 from .scheduling import (
     DraftSlotInput,
     StaleScheduleError,
@@ -110,6 +111,11 @@ def save_slot_request(
         request: SlotRequest | None = SlotRequest.objects.filter(
             event=event, streamer=streamer
         ).first()
+        action = (
+            "updated"
+            if request and request.status == SlotRequest.Status.SUBMITTED
+            else "submitted"
+        )
         if request is None:
             if expected_request_version is not None:
                 raise StaleScheduleError(
@@ -134,6 +140,7 @@ def save_slot_request(
                 for slot in slots
             ]
         )
+        request_notice(request, action)
         return request
 
 
@@ -148,9 +155,12 @@ def withdraw_slot_request(
     if request.streamer_id != streamer.pk:
         raise PermissionDenied("You can only withdraw your own request.")
     _lock_event(request.event_id, request.event.schedule_version)
+    was_withdrawn = request.status == SlotRequest.Status.WITHDRAWN
     _claim_request(request, expected_version)
     request.status = SlotRequest.Status.WITHDRAWN
     request.save(update_fields=("status", "version", "updated_at"))
+    if not was_withdrawn:
+        request_notice(request, "withdrawn")
     return request
 
 
@@ -163,11 +173,14 @@ def decline_slot_request(
         pk=request_id
     )
     _lock_event(request.event_id, request.event.schedule_version)
+    was_declined = request.status == SlotRequest.Status.DECLINED
     _claim_request(request, expected_version)
     request.status = SlotRequest.Status.DECLINED
     request.organizer_notes = organizer_notes
     request.full_clean()
     request.save()
+    if not was_declined:
+        request_notice(request, "declined")
     return request
 
 

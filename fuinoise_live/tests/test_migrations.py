@@ -338,3 +338,78 @@ class TwitchSnapshotMigrationTests(MigrationTestCase):
         self.assertFalse(
             apps.get_model("fuinoise_live", "TwitchSnapshot").objects.exists()
         )
+
+
+class NotificationMigrationTests(MigrationTestCase):
+    def test_notification_tables_preserve_data_and_do_not_replay_old_alerts(self):
+        executor = MigrationExecutor(connection)
+        before = [("fuinoise_live", "0016_twitchsnapshot")]
+        after = [
+            (
+                "fuinoise_live",
+                "0017_discorddispatchstate_notification_discorddelivery_and_more",
+            )
+        ]
+        executor.migrate(before)
+        apps = executor.loader.project_state(before).apps
+        community = apps.get_model("fuinoise_live", "Community").objects.create(
+            name="Music", slug="music"
+        )
+        streamer = apps.get_model("fuinoise_live", "Streamer").objects.create(
+            display_name="Chosen name",
+            twitch_username="musician",
+            twitch_id="123",
+            organizer_notes="Private notes",
+        )
+        event = apps.get_model("fuinoise_live", "Event").objects.create(
+            date=datetime.date(2026, 10, 4),
+            community=community,
+            publication_status="published",
+            schedule_version=4,
+        )
+        start = datetime.datetime(2026, 10, 4, 20, tzinfo=datetime.timezone.utc)
+        slot = apps.get_model("fuinoise_live", "RaidSlot").objects.create(
+            event=event,
+            streamer=streamer,
+            start=start,
+            duration_minutes=90,
+            raid_slot_note="Published note",
+            replay_url="https://example.com/replay",
+        )
+        snapshot = apps.get_model("fuinoise_live", "TwitchSnapshot").objects.create(
+            streamer=streamer,
+            user_id="123",
+            login="musician",
+            display_name="Twitch name",
+            description="Biography",
+        )
+        fingerprint = _fingerprint(LiveEvent.objects.get(pk=event.pk))
+        executor = MigrationExecutor(connection)
+        executor.migrate(after)
+        apps = executor.loader.project_state(after).apps
+        self.assertEqual(_fingerprint(LiveEvent.objects.get(pk=event.pk)), fingerprint)
+        self.assertEqual(
+            apps.get_model("fuinoise_live", "Streamer")
+            .objects.get(pk=streamer.pk)
+            .organizer_notes,
+            "Private notes",
+        )
+        self.assertEqual(
+            apps.get_model("fuinoise_live", "RaidSlot")
+            .objects.get(pk=slot.pk)
+            .replay_url,
+            "https://example.com/replay",
+        )
+        self.assertEqual(
+            apps.get_model("fuinoise_live", "TwitchSnapshot")
+            .objects.get(pk=snapshot.pk)
+            .description,
+            "Biography",
+        )
+        for model in (
+            "Notification",
+            "NotificationRead",
+            "DiscordDelivery",
+            "DiscordDispatchState",
+        ):
+            self.assertFalse(apps.get_model("fuinoise_live", model).objects.exists())

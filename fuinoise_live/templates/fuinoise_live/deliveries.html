@@ -1,0 +1,22 @@
+{% extends "fuinoise_live/base.html" %}
+{% block title %}Discord deliveries{% endblock %}
+{% block content %}
+<div class="page-intro"><p class="eyebrow">Organizer notifications</p><h1>Discord deliveries</h1><p>{{ needs_attention }} need attention. On-site notifications remain available even when Discord delivery fails.</p><a class="text-link" href="{% url 'notification_inbox' %}">← Notifications</a></div>
+<form method="get" class="account-actions"><label>Delivery status <select name="status"><option value="">All</option>{% for value,label in statuses %}<option value="{{ value }}"{% if selected_status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label><button>Filter</button></form>
+<div class="notification-list">
+{% for delivery in page %}
+<article class="account-panel notification-card" id="delivery-{{ delivery.pk }}">
+<p class="muted small">{{ delivery.notification.created_at|date:"M j, Y · H:i T" }} · {% if delivery.notification.recipient_id %}Private message{% else %}Organizer channel{% endif %}</p>
+<h2>{{ delivery.notification.title }}</h2><p>{{ delivery.notification.body }}</p>
+<p><strong>{{ delivery.get_status_display }}</strong> · {{ delivery.attempts }} attempts</p>
+{% if delivery.last_error %}<p class="account-status">{{ delivery.last_error }}</p>{% endif %}
+{% if delivery.status == 'pending' %}<p>Next attempt after {{ delivery.next_attempt_at|date:"M j · H:i T" }}.</p>{% endif %}
+{% if delivery.status == 'sent' %}<p>Delivery recorded {{ delivery.delivered_at|date:"M j · H:i T" }}.</p>{% endif %}
+{% if delivery.status == 'failed' %}<p>Fix the connection or bot permissions before retrying.</p><form method="post" action="{% url 'notification_delivery_action' delivery.pk %}">{% csrf_token %}<input type="hidden" name="action" value="retry"><button>Queue retry</button></form>{% endif %}
+{% if delivery.status == 'uncertain' %}<p>Discord may already have received this message. It will not be resent automatically. Check the original channel for this notification, copy its message ID, and verify it here.</p>
+{% if delivery.channel_id %}<p>Channel ID: {{ delivery.channel_id }}</p><form method="post" action="{% url 'notification_delivery_action' delivery.pk %}">{% csrf_token %}<input type="hidden" name="action" value="verify"><label>Discord message ID <input name="message_id" required maxlength="32" inputmode="numeric" pattern="[0-9]+"></label><button>Verify delivered message</button></form>{% endif %}{% endif %}
+</article>
+{% empty %}<div class="empty-state"><p>No deliveries with this status.</p></div>{% endfor %}
+</div>
+{% include "fuinoise_live/notification_pagination.html" %}
+{% endblock %}

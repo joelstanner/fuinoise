@@ -18,9 +18,34 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 
-from fuinoise_live import account_views, organizer_api, request_views, views
+from fuinoise_live import (
+    account_views,
+    notification_views,
+    organizer_api,
+    request_views,
+    views,
+)
 
 urlpatterns = [
+    path("notifications/", notification_views.inbox, name="notification_inbox"),
+    path(
+        "notifications/<int:pk>/", notification_views.inbox, name="notification_detail"
+    ),
+    path(
+        "notifications/<int:pk>/read/",
+        notification_views.mark_read,
+        name="notification_read",
+    ),
+    path(
+        "organizer/notifications/",
+        notification_views.deliveries,
+        name="notification_deliveries",
+    ),
+    path(
+        "organizer/notifications/<int:pk>/",
+        notification_views.delivery_action,
+        name="notification_delivery_action",
+    ),
     path(
         "organizer/api/events/<int:pk>/import/preview/",
         organizer_api.import_preview_api,

@@ -18,6 +18,7 @@
         <a href="{% url 'upcoming_events' %}">Upcoming</a>
         <a href="{% url 'historical_events' %}">History</a>
         <a href="{% url 'account_home' %}">{% if user.is_authenticated %}Your account{% else %}Sign in{% endif %}</a>
+        {% if user.is_authenticated %}<a href="{% url 'notification_inbox' %}">Notifications</a>{% endif %}
         {% if perms.fuinoise_live.change_event and perms.fuinoise_live.change_raidslot %}<a href="{% url 'organizer_workspace' %}">Organize</a>{% endif %}
       </nav>
     </div>

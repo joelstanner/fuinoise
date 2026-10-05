@@ -1,0 +1,17 @@
+{% extends "fuinoise_live/base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block content %}
+<div class="page-intro"><p class="eyebrow">Stay up to date</p><h1>Notifications</h1><p>{{ unread_count }} unread</p>
+{% if detail %}<p><a class="text-link" href="{% url 'notification_inbox' %}">← All notifications</a></p>{% endif %}
+{% if perms.fuinoise_live.change_event and perms.fuinoise_live.change_raidslot %}<p><a class="text-link" href="{% url 'notification_deliveries' %}">Check Discord deliveries →</a></p>{% endif %}</div>
+<div class="notification-list">
+{% for notice in page %}
+<article class="account-panel notification-card{% if not notice.is_read %} unread{% endif %}" id="notification-{{ notice.pk }}">
+  <p class="muted small">{{ notice.created_at|date:"M j, Y · H:i T" }} · {% if notice.is_read %}Read{% else %}Unread{% endif %}{% if not notice.recipient_id %} · For organizers{% endif %}</p>
+  <h2>{{ notice.title }}</h2><p>{{ notice.body }}</p>
+  {% if not notice.is_read %}<form method="post" action="{% url 'notification_read' notice.pk %}">{% csrf_token %}<button>Mark as read</button></form>{% endif %}
+</article>
+{% empty %}<div class="empty-state"><p>No notifications yet.</p></div>{% endfor %}
+</div>
+{% include "fuinoise_live/notification_pagination.html" %}
+{% endblock %}

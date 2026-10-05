@@ -13,7 +13,9 @@ pasted import, Twitch information, and public visitor-local times are implemente
 see [workspace documentation](docs/organizer-workspace.md) and
 [import and public information](docs/import-and-public-information.md).
 Assignments become confirmed to streamers on publication; draft edits send no
-confirmation. Notification delivery is still to be built.
+confirmation. On-site notifications and the Discord outbox are implemented;
+see [notification operations](docs/notifications.md). Scheduled delivery and live
+Discord rehearsal still need production configuration.
 
 - [x] Add flexible slot durations with a configurable one-hour default, overlap validation, and overnight handling. Migration leaves legacy durations unknown until reviewed.
 - [x] Add backend working schedule drafts, atomic explicit publication, configurable signup opening, and protection against publishing stale assignments after a cancellation.
@@ -24,7 +26,8 @@ confirmation. Notification delivery is still to be built.
 - [x] Add pasted-lineup import with review of parsed times and streamer matches. Keep empty time labels as open slots and require correction of ambiguous input. Imports save atomically to private drafts.
 - [x] Pull streamer information from Twitch and show live/offline status through a bounded service layer with failure handling. Keep local schedules readable during an outage; expired or failed checks show unavailable status.
 - [x] Show event and visitor-local times on public schedules; verify essential workflows on phones and desktop browsers, including expanded import review and public rendering without JavaScript.
-- [ ] Add on-site notifications and Discord organizer-channel alerts plus private messages to affected streamers.
+- [x] Add on-site notifications and Discord organizer-channel alerts plus private messages to affected streamers. Delivery claims, recorded receipts, bounded retries, and uncertain-outcome review protect against duplicates.
+- [ ] Configure the organizer Discord channel and recurring delivery worker, then verify real channel alerts, private messages, and recovery during the hosted rehearsal.
 - [ ] Configure and document public deployment, persistent data, upgrades, backups, and restoration.
 - [ ] Complete a real pilot event and the release acceptance checks in the MVP definition.
 
